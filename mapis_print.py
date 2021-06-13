@@ -49,22 +49,23 @@ colorama properties."""
 
 # TODO use "".join()
 def format_dict_output(key_style, key, value_style, value):
-    output =   ""
-    output += f"{key_style}" if key_style else colorama.Style.NORMAL
-    output += f"{key}: "
-    output += f"{value_style}" if value_style else colorama.Style.NORMAL
-    output += f"{value}"
+    output =   "".join([
+        f"{key_style}" if key_style else colorama.Style.NORMAL,
+        f"{key}: ",
+        f"{value_style}" if value_style else colorama.Style.NORMAL,
+        f"{value}",
+    ])
 
     return output
 
 
 def print_ip_api(ip_api_data):
     # name: key
-    parameters = { "ISP":"isp", "ASN":"as", "Country Code":"countryCode",
-                   "Country":"country", "Region Code":"region",
-                   "Region":"regionName", "Zip Code":"zip",
-                   "Time Zone":"timezone", "Latitude":"lat",
-                   "Longitude":"lon" }
+    parameters = { "ISP": "isp", "ASN": "as", "Country Code": "countryCode",
+                   "Country": "country", "Region Code": "region",
+                   "Region": "regionName", "Zip Code": "zip",
+                   "Time Zone": "timezone", "Latitude": "lat",
+                   "Longitude": "lon" }
 
     print(f"{colorama.Style.BRIGHT}ip-api.com API Response:")
 
@@ -72,8 +73,8 @@ def print_ip_api(ip_api_data):
         print(format_dict_output(key_style=colorama.Style.BRIGHT + colorama.Fore.WHITE,
                                  key=name,
                                  value_style=colorama.Fore.WHITE,
-                                 value=ip_api_data[key]))
-    print()
+                                 value=ip_api_data[key]),
+              end="\n\n")
 
 
 def print_shodan(api_data, target):
@@ -84,16 +85,16 @@ def print_shodan(api_data, target):
         return
 
     # name: key
-    parameters = { "Last Update":"last_update", "Open Ports":"ports",
-                   "ISP":"isp", "Hostnames":"hostnames", "Country":"country",
-                   "Latitude":"latitude", "Longitude":"longitude" }
+    parameters = { "Last Update": "last_update", "Open Ports": "ports",
+                   "ISP": "isp", "Hostnames": "hostnames", "Country": "country",
+                   "Latitude": "latitude", "Longitude": "longitude" }
 
     for name, key in parameters.items():
         print(format_dict_output(key_style=colorama.Style.BRIGHT + colorama.Fore.MAGENTA,
                                  key=name,
                                  value_style=colorama.Fore.MAGENTA,
-                                 value=api_data[key] if key in api_data else "Not found"))
-    print()
+                                 value=api_data.get(key, "Not found")),
+              end="\n\n")
 
 
 def print_virustotal(api_data, target, target_type):
@@ -114,22 +115,20 @@ def print_virustotal(api_data, target, target_type):
                                  value=api_data[parameters[0]]))
 
     if target_type == "address":
-        print(f"{colorama.Fore.LIGHTCYAN_EX}https://www.virustotal.com/gui/ip-address/{target}/detection")
+        print(f"{colorama.Fore.LIGHTCYAN_EX}https://www.virustotal.com/gui/ip-address/{target}/detection", end="\n\n")
     elif target_type == "hash":
-        print(f"{colorama.Fore.LIGHTCYAN_EX}https://www.virustotal.com/gui/file/{target}/detection")
-    print()
+        print(f"{colorama.Fore.LIGHTCYAN_EX}https://www.virustotal.com/gui/file/{target}/detection", end="\n\n")
 
 
 def print_threatcrowd_ip(target_api_data, target):
-    if "resolutions" in target_api_data and len(target_api_data["resolutions"]) > 0:
+    if len(target_api_data.get("resolutions", list())) > 0:
         print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}Domains linked with {target} (first 25):")
         print(", ".join([ resolution["domain"] for resolution in target_api_data["resolutions"][:25] ]))
     else:
         print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No domains found")
-
     print()
 
-    if "hashes" in target_api_data and len(target_api_data["hashes"]) > 0:
+    if len(target_api_data.get("hashes", list())) > 0:
         print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}Hashes linked with {target} (first 25):")
         print(", ".join(target_api_data["hashes"][:25]))
     else:
@@ -138,19 +137,19 @@ def print_threatcrowd_ip(target_api_data, target):
 
 
 def print_threatcrowd_hash(target_api_data, target):
-    if "scans" in target_api_data and len(target_api_data["scans"]) > 0:
+    if len(target_api_data.get("scans", list())) > 0:
         print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}Scan results for {target} (first 25):")
         print(", ".join([ scan for scan in target_api_data["scans"][:25] if scan ]))
     else:
         print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No scan results")
 
-    if "domains" in target_api_data and len(target_api_data["domains"]) > 0:
+    if len(target_api_data.get("domains", list())) > 0:
         print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}Domains linked with {target} (first 25):")
         print(", ".join([ domain for domain in target_api_data["domains"][:25] if domain ]))
     else:
         print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No domains found")
 
-    if "references" in target_api_data and len(target_api_data["references"]) > 0:
+    if len(target_api_data.get("references", list())) > 0:
         print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}References for {target} (first 25):")
         print(", ".join([ reference for reference in target_api_data["references"][:25] if reference ]))
     else:
@@ -192,7 +191,6 @@ def print_threatcrowd(target_api_data, target, target_type):
 
 def print_alienvault_otx_ip(target_url_api_data, target_malware_api_data, target):
     # Process url data
-    unique_domains = []
     for url_entry in target_url_api_data["url_list"]:
         if url_entry["domain"] not in unique_domains and len(url_entry["domain"]) > 0:
             unique_domains.append(url_entry["domain"])
@@ -263,7 +261,7 @@ def print_alienvault_otx_hash(general_data, analysis_data, target):
         analysis_yarad = analysis_plugins["yarad"]["results"]
         analysis_peanomal = analysis_plugins["peanomal"]["results"]
 
-        packers = analysis_pe32info["packers"] if analysis_pe32info["packers"] else []
+        packers = analysis_pe32info.get("packers", list())
         yara_rule_names = [ x["rule_name"] for x in analysis_yarad["detection"] ]
 
     try:
@@ -277,7 +275,7 @@ def print_alienvault_otx_hash(general_data, analysis_data, target):
             "SSDeep hash": analysis_info["ssdeep"],
             "ImpHash": analysis_pe32info["imphash"],
             "PEHash": analysis_pe32info["pehash"],
-            "Rich PEHash": analysis_pe32info["richhash"] if "richhash" in analysis_pe32info else "No Rich PEHash",
+            "Rich PEHash": analysis_pe32info.get("richhash", "No Rich PEHash"),
             "Anomalies detected by PEAnomal": analysis_peanomal["anomalies"],
             "YARA compression rule detections": sum(1 for x in analysis_yarad["detection"]
                                                     if "category" in x and "compression" in x["category"]),
@@ -295,7 +293,6 @@ def print_alienvault_otx_hash(general_data, analysis_data, target):
                                  key=key,
                                  value_style=None,
                                  value=value))
-
     print()
 
     if analysis_output:

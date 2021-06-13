@@ -25,10 +25,11 @@ SUCCESS_STYLE = f"{colorama.Fore.GREEN}{colorama.Style.BRIGHT}"
 FAIL_STYLE = f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}"
 
 def print_status(success, api, target, status_code=None):
-    output  =  ""
-    output += f"{SUCCESS_STYLE}Successful " if success else f"{FAIL_STYLE}Failed "
-    output += f"{api} request for {target}"
-    output += f"with error code {status_code}" if status_code else ""
+    output = "".join([
+        f"{SUCCESS_STYLE}Successful " if success else f"{FAIL_STYLE}Failed ",
+        f"{api} request for {target}",
+        f"with error code {status_code}" if status_code else ""
+    ])
 
 
 def add_ip_api_data(target_api_data, response, target):
