@@ -39,7 +39,7 @@ def read_targets_stdin():
         # Don't print extraneous output if getting input from a pipe
         if not stdin_is_pipe:
             request_str += f"{colorama.Fore.LIGHTCYAN_EX}{colorama.Style.BRIGHT}"
-            request_str += "Input an IP address or sample hash (QUIT to exit): "
+            request_str += "Input an IP address or sample hash (quit to exit): "
 
         try:
             target = input(request_str).strip()
@@ -54,14 +54,15 @@ def read_targets_stdin():
             print("\nCaught keyboard interrupt. Exiting.")
             return
 
-        if target == "QUIT":
+        if target == "quit":
             break
-        elif target == "WARRANTY":
+        elif target == "warranty":
             print(mapis_license_notices.WARRANTY)
             continue
-        elif target == "REDISTRIBUTION":
+        elif target == "redistribution":
             print(mapis_license_notices.REDISTRIBUTION)
             continue
+        #elif target == "screenshot":
 
         target_type = get_target_type(target)
         yield (target, target_type)
