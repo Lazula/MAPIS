@@ -105,7 +105,7 @@ def add_alienvault_otx_data_hash(target_api_data, responses, target):
 
 
 def add_alienvault_otx_data(target_api_data, responses, target, target_type):
-    target_api_data["alienvault_otx"] = {}
+    target_api_data["alienvault_otx"] = dict()
 
     if target_type == "address":
         add_alienvault_otx_data_ip(target_api_data, responses, target)

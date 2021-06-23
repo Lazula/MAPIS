@@ -24,7 +24,7 @@ import json
 
 from os.path import join
 
-cache_files_by_age = []
+cache_files_by_age = list()
 
 readable_size_units = {
     "": 1,  "K":   1000, "M":  1000**2, "G":  1000**3, "T":  1000**4,
@@ -136,7 +136,7 @@ def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=
 
             write_to_cache = True
             reason = "Cleared space."
-        elif quota_strategy == "keep" and verbose:
+        elif quota_strategy == "keep":
             if current_disk_usage + len(cache_data) <= quota_size:
                 write_to_cache = True
                 reason = None

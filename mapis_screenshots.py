@@ -36,8 +36,7 @@ def create_headless_firefox_driver():
 
 
 def screenshot_target(driver, target, target_type, folder, verbose=False, overwrite=False):
-    if not os.path.exists(folder):
-        os.makedirs(folder)
+    os.makedirs(folder, exist_ok=True)
 
     if target_type == "address":
         screenshot_shodan(driver, target, target_type, folder, verbose=verbose, overwrite=overwrite)

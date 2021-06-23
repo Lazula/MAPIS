@@ -191,6 +191,7 @@ def print_threatcrowd(target_api_data, target, target_type):
 
 def print_alienvault_otx_ip(target_url_api_data, target_malware_api_data, target):
     # Process url data
+    unique_domains = list()
     for url_entry in target_url_api_data["url_list"]:
         if url_entry["domain"] not in unique_domains and len(url_entry["domain"]) > 0:
             unique_domains.append(url_entry["domain"])
@@ -203,14 +204,14 @@ def print_alienvault_otx_ip(target_url_api_data, target_malware_api_data, target
         print(f"{colorama.Style.BRIGHT}{colorama.Fore.LIGHTRED_EX}No domains found for {target}")
 
     # Process malware data
-    hashes = []
-    detections = []
+    hashes = list()
+    detections = list()
     for entry in target_malware_api_data["data"]:
         if entry["hash"] not in hashes:
             hashes.append(entry["hash"])
             detections.append(entry["detections"])
 
-    output_lines = []
+    output_lines = list()
     for sample_hash, detections in zip(hashes, detections):
         output_line = sample_hash
 

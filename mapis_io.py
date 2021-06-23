@@ -26,6 +26,16 @@ import colorama
 
 import mapis_license_notices
 
+
+INTERACTIVE_COMMANDS = {
+    "help": "Print this help prompt",
+    "quit": "Exit the program",
+    "warranty": "Show warranty information",
+    "redistribution": "Show information about terms of redistribution",
+    "screenshot": "Take screenshots for the previous target"
+}
+
+
 def read_targets_stdin():
     stdin_is_pipe = stat.S_ISFIFO(os.fstat(0).st_mode)
 
@@ -39,7 +49,7 @@ def read_targets_stdin():
         # Don't print extraneous output if getting input from a pipe
         if not stdin_is_pipe:
             request_str += f"{colorama.Fore.LIGHTCYAN_EX}{colorama.Style.BRIGHT}"
-            request_str += "Input an IP address or sample hash (quit to exit): "
+            request_str += "Input an IP address or sample hash (help for commands): "
 
         try:
             target = input(request_str).strip()
@@ -54,18 +64,7 @@ def read_targets_stdin():
             print("\nCaught keyboard interrupt. Exiting.")
             return
 
-        if target == "quit":
-            break
-        elif target == "warranty":
-            print(mapis_license_notices.WARRANTY)
-            continue
-        elif target == "redistribution":
-            print(mapis_license_notices.REDISTRIBUTION)
-            continue
-        #elif target == "screenshot":
-
-        target_type = get_target_type(target)
-        yield (target, target_type)
+        yield (target, get_target_type(target))
 
 
 def read_targets_file(file_name):
@@ -92,6 +91,9 @@ def get_target_type(target):
 
     if all(c in "0123456789abcdefABCDEF" for c in target):
         return "hash"
+
+    if target in INTERACTIVE_COMMANDS.keys():
+        return "command"
 
     # No matching target type
     return None

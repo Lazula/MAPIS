@@ -22,6 +22,7 @@
 import os
 import sys
 import argparse
+from os.path import join
 
 import colorama
 import vt
@@ -32,19 +33,20 @@ import mapis_io
 import mapis_data
 import mapis_screenshots
 import mapis_cache
+import mapis_license_notices
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")
     parser.add_argument("-c", "--color", action="store_true", help="Enable color output")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
 
-    target_args = parser.add_argument_group(description="Target arguments. These handle both IP addresses and hashes at the same time.")
+    target_args = parser.add_mutually_exclusive_group()
     target_args.add_argument("-n", "--stdin", action="store_true", help="Interactive mode. Behaves when stdin in a pipe.")
     target_args.add_argument("-t", "--target-list", type=str, help="Comma-separated list of targets.", metavar="TARGET[,TARGET...]")
     target_args.add_argument("-T", "--target-file", type=str, help="File containing IP addresses and/or hashes; one per line.", metavar="FILE")
 
     key_args = parser.add_argument_group(description="Key arguments.")
-    key_args.add_argument("--keydir", type=str, help="Directory which stores API key files.", default="API_KEYS")
+    key_args.add_argument("--keydir", type=str, help="Directory which stores API key files. Other key options will override these files.", default="API_KEYS")
     key_args.add_argument("--shodan-key", type=str, help="Shodan API key (overrides keyfile).")
     key_args.add_argument("--vt-key", type=str, help="VirusTotal API key (overrides keyfile).")
     #key_args.add_argument("--otx-key", type=str, help="OTX API key (overrides keyfile).")
@@ -104,6 +106,33 @@ def parse_arguments():
     return args
 
 
+def read_keys(args):
+    keys = dict()
+
+    # Read from files first
+    if args.keydir:
+        try: keys["shodan"] = open(join(args.keydir, "shodanapikey.txt"), "r").read().strip()
+        except OSError: pass
+        try: keys["vt"] = open(join(args.keydir, "vtapikey.txt"), "r").read().strip()
+        except OSError: pass
+        try: keys["otx"] = open(join(args.keydir, "otxapikey.txt"), "r").read().strip()
+        except OSError: pass
+        try: keys["xforce"] = open(join(args.keydir, "xforceapikey.txt"), "r").read().strip()
+        except OSError: pass
+
+    # Direct CLI args override keys from files
+    if args.shodan_key:
+        keys["shodan"] = args.shodan_key
+    if args.vt_key:
+        keys["vt"] = args.vt_key
+    """if args.otx_key:
+        keys["otx"] = args.otx_key
+    if args.xforce_key:
+        keys["xforce"] = args.xforce_key"""
+
+    return keys
+
+
 def main():
     colorama.init(autoreset=True)
 
@@ -113,6 +142,7 @@ def main():
         print("Error encountered during argument parsing.")
         return 1
 
+    # Only one input method is allowed at once, so only one of these will run.
     if args.stdin:
         targets = mapis_io.read_targets_stdin()
 
@@ -122,94 +152,72 @@ def main():
     if args.target_file:
         targets = mapis_io.read_targets_file(args.target_file)
 
-    shodan_api_key = None
-    vt_api_key = None
-    #otx_api_key = None
-    #xforce_api_key = None
+    keys = read_keys(args)
 
-    if args.keydir:
-        try:
-            shodan_api_key = open(f"{args.keydir}/shodanapikey.txt", "r").read().strip()
-        except:
-            pass
-        try:
-            vt_api_key = open(f"{args.keydir}/vtapikey.txt", "r").read().strip()
-        except:
-            pass
-        #try:
-        #    otx_api_key = open(f"{args.keydir}/otxapikey.txt", "r").read().strip()
-        #except:
-        #    pass
-        #try:
-        #    xforce_api_key = open(f"{args.keydir}/xforceapikey.txt", "r").read().strip()
-        #except:
-        #    pass
-
-    if args.shodan_key:
-        shodan_api_key = args.shodan_key
-    if args.vt_key:
-        vt_api_key = args.vt_key
-    #if args.otx_key:
-    #    otx_api_key = args.otx_key
-    #if args.xforce_key:
-    #    xforce_api_key = args.xforce_key
-
-    if not shodan_api_key:
+    if "shodan" not in keys:
         raise RuntimeError("No Shodan key")
-    if not vt_api_key:
+    if "vt" not in keys:
         raise RuntimeError("No VT key")
-    #if not otx_api_key:
-    #    raise RuntimeError("No OTX key")
-    #if not xforce_api_key
-    #    raise RuntimeError("No XForce key")
+    """if "otx" not in keys:
+        raise RuntimeError("No OTX key")
+    if "xforce" not in keys:
+        raise RuntimeError("No XForce key")"""
 
-    if args.screenshot:
-        driver = mapis_screenshots.create_headless_firefox_driver()
+    driver = mapis_screenshots.create_headless_firefox_driver()
 
-        if not os.path.exists(args.screenshot_folder):
-            os.mkdir(args.screenshot_folder)
-
-    cache_responses = not args.no_cache and not args.dry_run
-
-    if cache_responses and not os.path.exists(args.cache_folder):
-        os.mkdir(args.cache_folder)
+    # Disable caching if turned off in options or dry run
+    cache_responses = not (args.no_cache or args.dry_run)
+    if cache_responses:
+        os.makedirs(args.cache_folder, exist_ok=True)
 
     quota_size = mapis_cache.readable_to_bytes(args.disk_quota_size)
     current_disk_usage = None
 
-    vt_client = vt.Client(vt_api_key)
+    vt_client = vt.Client(keys["vt"])
+    previous_target = None
+    previous_target_type = None
 
     for (target, target_type) in targets:
         if not target_type:
-            print(f'Failed to parse "{target}" as IP address or hash.')
+            print(f'Failed to parse "{target}" as IP address, hash, or command.')
             continue
+
+        # Process commands
+        if target_type == "command":
+            if target == "help":
+                for command, help_text in mapis_io.INTERACTIVE_COMMANDS.items():
+                    print(command, ": ", help_text, sep="")
+            elif target == "quit":
+                break
+            elif target == "warranty":
+                print(mapis_license_notices.WARRANTY)
+            elif target == "redistribution":
+                print(mapis_license_notices.REDISTRIBUTION)
+            elif target == "screenshot":
+                if previous_target:
+                    print("Taking screenshots for {previous_target_type}.")
+                    target_screenshot_folder = join(args.screenshot_folder, previous_target_type, previous_target)
+                    mapis_screenshots.screenshot_target(driver, previous_target, previous_target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
+                else:
+                    print("The `screenshot` command can only be used if a target has already been provided.")
+            else:
+                print(f"Invalid command {target} (should have been checked by read_targets_stdin)")
+
+            print()
+            # Following code applies only to lookups
+            continue
+
+        previous_target, previous_target_type = target, target_type
 
         print(f"{colorama.Style.BRIGHT}Looking up \"{target}\"...")
         print()
 
         if args.screenshot:
             # Format example: folder/address/1.2.3.4/virustotal.png
-            target_screenshot_folder = f"{args.screenshot_folder}/{target_type}/{target}"
+            target_screenshot_folder = join(args.screenshot_folder, target_type, target)
             mapis_screenshots.screenshot_target(driver, target, target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
 
         print()
-
-        if args.screenshot:
-            # Format example: folder/address/1.2.3.4/virustotal.png
-            target_screenshot_folder = f"{args.screenshot_folder}/{target_type}/{target}"
-            mapis_screenshots.screenshot_target(driver, target, target_type, target_screenshot_folder)
-
-        # Initialize data storage dict
-        target_data_dict = {
-            "target": target,
-            "target_type": target_type,
-            "target_api_data": {}
-        }
-
-        if args.screenshot:
-            # Format example: folder/address/1.2.3.4/virustotal.png
-            target_screenshot_folder = f"{args.screenshot_folder}/{target_type}/{target}"
-            mapis_screenshots.screenshot_target(driver, target, target_type, target_screenshot_folder)
 
         # Attempt to load from disk cache
         if cache_responses:
@@ -222,7 +230,7 @@ def main():
         target_data_dict = {
             "target": target,
             "target_type": target_type,
-            "target_api_data": {}
+            "target_api_data": dict()
         }
 
         if target_type == "address":
@@ -230,7 +238,7 @@ def main():
             mapis_data.add_ip_api_data(target_data_dict["target_api_data"], ip_api_response, target)
 
         if target_type == "address":
-            shodan_response = mapis_requests.request_shodan(target, target_type, shodan_api_key, dry_run=args.dry_run)
+            shodan_response = mapis_requests.request_shodan(target, target_type, keys["shodan"], dry_run=args.dry_run)
             mapis_data.add_shodan_data(target_data_dict["target_api_data"], shodan_response, target)
 
         virustotal_response = mapis_requests.request_virustotal(vt_client, target, target_type, dry_run=args.dry_run)
