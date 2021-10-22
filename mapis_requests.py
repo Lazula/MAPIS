@@ -22,11 +22,36 @@
 import requests
 import vt
 
+from mapis import KEY_APIS
+
 def dummy_response(content):
     response = requests.models.Response()
     response.status_code = 200
     response._content = content
     return response
+
+def make_request(api_name, target, target_type, keys, vt_client=None, dry_run=False):
+    request_func_map = {
+        "ip_api": request_ip_api,
+        "shodan": request_shodan,
+        "vt":     True, # Special case, see below
+        "tc":     request_threatcrowd,
+        "otx":    request_alienvault_otx,
+    }
+
+    try:
+        request_func = request_func_map[api_name]
+    except KeyError:
+        raise ValueError(f"No such API {api_name}")
+
+    if api_name == "vt":
+        # Special case since key is used for client init
+        return request_virustotal(vt_client, target, target_type, dry_run)
+    elif api_name in KEY_APIS.keys():
+        return request_func(target, target_type, keys[api_name], dry_run)
+    else:
+        return request_func(target, target_type, dry_run)
+
 
 # Batch api supports up to 100 queries per request,
 # but this would require some significant changes...

@@ -35,21 +35,48 @@ import mapis_screenshots
 import mapis_cache
 import mapis_license_notices
 
+# Map internal API names to printable strings
+SUPPORTED_APIS = {
+    "ip_api": "IP-API",
+    "shodan": "Shodan",
+    "vt":     "VirusTotal",
+    "tc":     "ThreatCrowd",
+    "otx":    "AlienVault OTX",
+    #"xforce": "XForce",
+}
+
+# Same as SUPPORTED_APIS, but only APIs that require keys
+KEY_APIS = {
+    "shodan": "Shodan",
+    "vt":     "VirusTotal",
+    #"xforce": "XForce",
+}
+
+# Appropriate target types for each API
+API_TARGET_TYPES = {
+    "ip_api": [ "address" ],
+    "shodan": [ "address" ],
+    "vt":     [ "address", "hash" ],
+    "tc":     [ "address", "hash" ],
+    "otx":    [ "address", "hash" ],
+    #"xforce": [ "address", "hash" ],
+}
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")
     parser.add_argument("-c", "--color", action="store_true", help="Enable color output")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
 
     target_args = parser.add_mutually_exclusive_group()
-    target_args.add_argument("-n", "--stdin", action="store_true", help="Interactive mode. Behaves when stdin in a pipe.")
+    target_args.add_argument("-n", "--stdin", action="store_true", help="Interactive mode. Behaves properly when stdin is a pipe.")
     target_args.add_argument("-t", "--target-list", type=str, help="Comma-separated list of targets.", metavar="TARGET[,TARGET...]")
     target_args.add_argument("-T", "--target-file", type=str, help="File containing IP addresses and/or hashes; one per line.", metavar="FILE")
 
     key_args = parser.add_argument_group(description="Key arguments.")
-    key_args.add_argument("--keydir", type=str, help="Directory which stores API key files. Other key options will override these files.", default="API_KEYS")
+    key_args.add_argument("--keydir", type=str, help="Directory which stores API key files (name format: <api_name>_key.txt). Other key options will override these files.", default="API_KEYS")
     key_args.add_argument("--shodan-key", type=str, help="Shodan API key (overrides keyfile).")
     key_args.add_argument("--vt-key", type=str, help="VirusTotal API key (overrides keyfile).")
-    #key_args.add_argument("--otx-key", type=str, help="OTX API key (overrides keyfile).")
     #key_args.add_argument("--xforce-key", type=str, help="XForce API key (overrides keyfile).")
 
     # TODO time this
@@ -84,9 +111,9 @@ def parse_arguments():
     if not os.path.isdir(args.keydir):
         args.keydir = None
 
-    if not args.keydir and not (args.shodan_key and args.vt_key):
+    if not args.keydir and not all(vars(args).get(f"{api}_key") for api in KEY_APIS.keys()):
         parser.print_help()
-        print("\nYou must specify either an existing key directory or all api keys.")
+        print("\nYou must specify an existing key directory if you have not provided all API keys.")
         raise RuntimeError
 
     if not (args.stdin or args.target_list or args.target_file):
@@ -109,26 +136,19 @@ def parse_arguments():
 def read_keys(args):
     keys = dict()
 
-    # Read from files first
-    if args.keydir:
-        try: keys["shodan"] = open(join(args.keydir, "shodanapikey.txt"), "r").read().strip()
-        except OSError: pass
-        try: keys["vt"] = open(join(args.keydir, "vtapikey.txt"), "r").read().strip()
-        except OSError: pass
-        try: keys["otx"] = open(join(args.keydir, "otxapikey.txt"), "r").read().strip()
-        except OSError: pass
-        try: keys["xforce"] = open(join(args.keydir, "xforceapikey.txt"), "r").read().strip()
-        except OSError: pass
-
-    # Direct CLI args override keys from files
-    if args.shodan_key:
-        keys["shodan"] = args.shodan_key
-    if args.vt_key:
-        keys["vt"] = args.vt_key
-    """if args.otx_key:
-        keys["otx"] = args.otx_key
-    if args.xforce_key:
-        keys["xforce"] = args.xforce_key"""
+    for api in KEY_APIS.keys():
+        # First, check for keys given in arguments
+        arg_key = vars(args).get(f"{api}_key")
+        if arg_key:
+            keys[api] = arg_key
+        # Otherwise, try to read key from file
+        elif args.keydir:
+            try:
+                keys[api] = open(join(args.keydir, f"{api}_key.txt")).read().strip()
+            except OSError:
+                # Skip over nonexistent keys silently
+                # Missing key errors are handled outside this function
+                pass
 
     return keys
 
@@ -154,14 +174,10 @@ def main():
 
     keys = read_keys(args)
 
-    if "shodan" not in keys:
-        raise RuntimeError("No Shodan key")
-    if "vt" not in keys:
-        raise RuntimeError("No VT key")
-    """if "otx" not in keys:
-        raise RuntimeError("No OTX key")
-    if "xforce" not in keys:
-        raise RuntimeError("No XForce key")"""
+    for api in KEY_APIS.keys():
+        if api not in keys:
+            print(f"No {api} key. Provide it with --{api}-key or in the key directory as {api}_key.txt")
+            return 1
 
     driver = mapis_screenshots.create_headless_firefox_driver()
 
@@ -233,28 +249,19 @@ def main():
             "target_api_data": dict()
         }
 
-        if target_type == "address":
-            ip_api_response = mapis_requests.request_ip_api(target, target_type, dry_run=args.dry_run)
-            mapis_data.add_ip_api_data(target_data_dict["target_api_data"], ip_api_response, target)
-
-        if target_type == "address":
-            shodan_response = mapis_requests.request_shodan(target, target_type, keys["shodan"], dry_run=args.dry_run)
-            mapis_data.add_shodan_data(target_data_dict["target_api_data"], shodan_response, target)
-
-        virustotal_response = mapis_requests.request_virustotal(vt_client, target, target_type, dry_run=args.dry_run)
-        mapis_data.add_virustotal_data(target_data_dict["target_api_data"], virustotal_response, target)
-
-        threatcrowd_response = mapis_requests.request_threatcrowd(target, target_type, dry_run=args.dry_run)
-        mapis_data.add_threatcrowd_data(target_data_dict["target_api_data"], threatcrowd_response, target)
-
-        alienvault_otx_response = mapis_requests.request_alienvault_otx(target, target_type, dry_run=args.dry_run)
-        mapis_data.add_alienvault_otx_data(target_data_dict["target_api_data"], alienvault_otx_response, target, target_type)
+        # Make requests and record in target data
+        for api, types in API_TARGET_TYPES.items():
+            if target_type in types:
+                response = mapis_requests.make_request(api, target, target_type, keys,
+                        vt_client=vt_client, dry_run=args.dry_run)
+                mapis_data.add_api_data(api, target_data_dict["target_api_data"], response, target)
 
         # Cache to disk
         if cache_responses:
-            current_disk_usage = mapis_cache.put_cache_entry(args.cache_folder, target_data_dict, use_quota=args.disk_quota, quota_size=quota_size,
-                                                     quota_strategy=args.disk_quota_strategy, current_disk_usage=current_disk_usage,
-                                                     verbose=args.verbose)
+            current_disk_usage = mapis_cache.put_cache_entry(args.cache_folder, target_data_dict,
+                    use_quota=args.disk_quota, quota_size=quota_size,
+                    quota_strategy=args.disk_quota_strategy, current_disk_usage=current_disk_usage,
+                    verbose=args.verbose)
 
         # Print all found data
         mapis_print.print_target_data(target_data_dict)

@@ -21,6 +21,8 @@
 
 import colorama
 
+from mapis_io import get_target_type
+
 SUCCESS_STYLE = f"{colorama.Fore.GREEN}{colorama.Style.BRIGHT}"
 FAIL_STYLE = f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}"
 
@@ -30,6 +32,23 @@ def print_status(success, api, target, status_code=None):
         f"{api} request for {target}",
         f"with error code {status_code}" if status_code else ""
     ])
+
+
+def add_api_data(api_name, target_api_data, response, target):
+    data_func_map = {
+        "ip_api": add_ip_api_data,
+        "shodan": add_shodan_data,
+        "vt":     add_virustotal_data,
+        "tc":     add_threatcrowd_data,
+        "otx":    add_alienvault_otx_data,
+    }
+
+    try:
+        data_func = data_func_map[api_name]
+    except KeyError:
+        raise ValueError(f"No such API {api_name}")
+
+    return data_func(target_api_data, response, target)
 
 
 def add_ip_api_data(target_api_data, response, target):
@@ -104,8 +123,12 @@ def add_alienvault_otx_data_hash(target_api_data, responses, target):
         print_status(False, "alienvault otx analysis", target, analysis_response.status_code)
 
 
-def add_alienvault_otx_data(target_api_data, responses, target, target_type):
+def add_alienvault_otx_data(target_api_data, responses, target):
     target_api_data["alienvault_otx"] = dict()
+
+    # Since we know the target is already good, this recalculation is an
+    # acceptable tradeoff for the simplicity of keeping parameters uniform
+    target_type = get_target_type(target)
 
     if target_type == "address":
         add_alienvault_otx_data_ip(target_api_data, responses, target)

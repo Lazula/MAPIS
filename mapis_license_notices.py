@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-INTERACTIVE_MODE = """
+INTERACTIVE_MODE = """\
 MAPIS: Multi-API Search - Identify malicious hosts and hashes
 Copyright (C) 2020-2021 Lazula <26179473+Lazula@users.noreply.github.com>
 This program comes with ABSOLUTELY NO WARRANTY; for details type `warranty`.
@@ -24,7 +24,7 @@ This is free software, and you are welcome to redistribute it
 under certain conditions; type `redistribution` for details.
 """
 
-WARRANTY = """
+WARRANTY = """\
   THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
 HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
@@ -45,7 +45,7 @@ EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGES.
 """
 
-REDISTRIBUTION = """
+REDISTRIBUTION = """\
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or

@@ -83,6 +83,9 @@ def read_targets_list(list_arg):
 
 
 def get_target_type(target):
+    if target in INTERACTIVE_COMMANDS.keys():
+        return "command"
+
     try:
         socket.inet_pton(socket.AF_INET, target)
         return "address"
@@ -91,9 +94,6 @@ def get_target_type(target):
 
     if all(c in "0123456789abcdefABCDEF" for c in target):
         return "hash"
-
-    if target in INTERACTIVE_COMMANDS.keys():
-        return "command"
 
     # No matching target type
     return None
