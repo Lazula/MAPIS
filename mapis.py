@@ -67,6 +67,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")
     parser.add_argument("-c", "--color", action="store_true", help="Enable color output")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(SUPPORTED_APIS.keys()), metavar="API[,API...]")
 
     target_args = parser.add_mutually_exclusive_group()
     target_args.add_argument("-n", "--stdin", action="store_true", help="Interactive mode. Behaves properly when stdin is a pipe.")
@@ -111,10 +112,24 @@ def parse_arguments():
     if not os.path.isdir(args.keydir):
         args.keydir = None
 
-    if not args.keydir and not all(vars(args).get(f"{api}_key") for api in KEY_APIS.keys()):
-        parser.print_help()
-        print("\nYou must specify an existing key directory if you have not provided all API keys.")
-        raise RuntimeError
+    if args.api_list:
+        args.api_list = args.api_list.split(",")
+    else:
+        args.api_list = SUPPORTED_APIS.keys()
+
+    for api in args.api_list:
+        if api not in SUPPORTED_APIS.keys():
+            parser.print_help()
+            print(f"\nInvalid API {api} provided in -a/--api-list.")
+            raise RuntimeError
+
+    if not args.keydir:
+        for api, name in KEY_APIS.items():
+            if api in args.api_list and not vars(args).get(f"{api}_key"):
+                parser.print_help()
+                print(f"\n{name} key missing.")
+                print("You must specify an existing key directory if you have not provided all API keys.")
+                raise RuntimeError
 
     if not (args.stdin or args.target_list or args.target_file):
         parser.print_help()
@@ -137,6 +152,9 @@ def read_keys(args):
     keys = dict()
 
     for api in KEY_APIS.keys():
+        if api not in args.api_list:
+            continue
+
         # First, check for keys given in arguments
         arg_key = vars(args).get(f"{api}_key")
         if arg_key:
@@ -174,8 +192,10 @@ def main():
 
     keys = read_keys(args)
 
+    # This is NOT redundant with the argument checker.
+    # Only this check accounts for missing key files.
     for api in KEY_APIS.keys():
-        if api not in keys:
+        if api in args.api_list and api not in keys:
             print(f"No {api} key. Provide it with --{api}-key or in the key directory as {api}_key.txt")
             return 1
 
@@ -251,6 +271,9 @@ def main():
 
         # Make requests and record in target data
         for api, types in API_TARGET_TYPES.items():
+            if api not in args.api_list:
+                continue
+
             if target_type in types:
                 response = mapis_requests.make_request(api, target, target_type, keys,
                         vt_client=vt_client, dry_run=args.dry_run)
