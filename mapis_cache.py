@@ -69,21 +69,21 @@ def get_cache_entry(cache_folder, target, verbose=False):
     try:
         cache_file_name = ".".join([target, "cache.json"])
         cache_file_path = join(cache_folder, cache_file_name)
-        with open(join(cache_folder, f"{target}.cache.json","r")) as cache_file:
+        with open(cache_file_path) as cache_file:
             target_data_dict = json.load(cache_file)
         if verbose:
-            print(f"Loaded {target} data from cache")
+            print(f"Found cache hit for {target}")
         return target_data_dict
     except FileNotFoundError:
         if verbose:
             print(f"Failed to find {target} in cache")
-        return None
     except json.JSONDecodeError:
         if verbose:
             print(f"Failed to load {target} from cache due to malformed JSON.")
     except Exception as err:
         if verbose:
             print(f"Unexpected error while getting cache entry:\n{repr(err)}")
+    return
 
 
 def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=None, quota_strategy=None, current_disk_usage=None, verbose=False):
