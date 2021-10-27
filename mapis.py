@@ -235,6 +235,7 @@ def main():
 
         # Process commands
         if target_type == "command":
+            target = target.lower()
             if target == "help":
                 for command, help_text in mapis_io.INTERACTIVE_COMMANDS.items():
                     print(command, ": ", help_text, sep="")
