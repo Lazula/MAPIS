@@ -68,6 +68,7 @@ def parse_arguments():
     parser.add_argument("-c", "--color", action="store_true", help="Enable color output")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(SUPPORTED_APIS.keys()), metavar="API[,API...]")
+    parser.add_argument("-p", "--purge-cache", action="store_true", help="Purge cache (delete all previously cached results.")
 
     target_args = parser.add_mutually_exclusive_group()
     target_args.add_argument("-n", "--stdin", action="store_true", help="Interactive mode. Behaves properly when stdin is a pipe.")
@@ -91,9 +92,9 @@ def parse_arguments():
     #     screenshot on a hit?
 
     cache_args = parser.add_argument_group(description="Caching arguments.")
-    cache_args.add_argument("--cache-folder", type=str, help="Specify a custom cache location. For faster performance without persistence, try using a ramdisk.", default="response_cache", metavar="FOLDER")
+    cache_args.add_argument("--cache-folder", type=str, help="Specify a custom cache location. For faster performance without persistence, try using a ramdisk. Exercise care with non-default options! Files in the cache folder are freqently deleted.", default="response_cache", metavar="FOLDER")
     cache_args.add_argument("--no-cache", action="store_true", help="Disable caching new responses to disk and loading cached responses from disk.")
-    cache_args.add_argument("--disk-quota", action="store_true", help="Enable disk quota to limit space used by response caching. If not used, it is recommended to periodically clear the cache folder.")
+    cache_args.add_argument("--disk-quota", action="store_true", help="Enable disk quota to limit space used by response caching. If not used, it is recommended to periodically clear the cache folder or use -p to purge it automatically at program start.")
     cache_args.add_argument("--disk-quota-size", type=str, help="Maximum disk usage in bytes or human-readable format. Supports base 10 and base 2 units, as well as decimal input. (e.g.: 1000, 50.5KB, 800MiB, 5G)", default="1GiB")
     cache_args.add_argument("--disk-quota-strategy", type=str, choices=["fifo", "keep"], help="Determine behavior when disk quota is reached. \"fifo\": Discard oldest cache entries. May cause increased disk wear with small quotas. \"keep\" (default): Stop caching new entries.", default="keep")
 
@@ -200,6 +201,11 @@ def main():
             return 1
 
     driver = mapis_screenshots.create_headless_firefox_driver()
+
+    # Purge cache
+    if args.purge_cache:
+        for f in os.listdir(args.cache_folder):
+            os.unlink(f)
 
     # Disable caching if turned off in options or dry run
     cache_responses = not (args.no_cache or args.dry_run)
