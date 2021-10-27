@@ -27,11 +27,11 @@ from os.path import join
 cache_files_by_age = list()
 
 readable_size_units = {
-    "": 1,  "K":   1000, "M":  1000**2, "G":  1000**3, "T":  1000**4,
-            "Ki":  1024, "Mi": 1024**2, "Gi": 1024**3, "Ti": 1024**4,
+    "":  1, "k":   1000, "m":   1000**2, "g":   1000**3, "t":   1000**4,
+    "b": 1, "kb":  1000, "mb":  1000**2, "gb":  1000**3, "tb":  1000**4,
 
-    "B": 1, "KB":  1000, "MB":  1000**2, "GB":  1000**3, "TB":  1000**4,
-            "KiB": 1024, "MiB": 1024**2, "GiB": 1024**3, "TiB": 1024**4
+            "ki":  1024, "mi":  1024**2, "gi":  1024**3, "ti":  1024**4,
+            "kib": 1024, "mib": 1024**2, "gib": 1024**3, "tib": 1024**4
 }
 
 def readable_to_bytes(size_str):
@@ -40,9 +40,11 @@ def readable_to_bytes(size_str):
     except ValueError:
         pass
 
+    size_str = size_str.lower()
+
     try:
-        # Use descending order to not catch "B" first
-        for letter in "TGMKB":
+        # Use descending order to not catch "b" first
+        for letter in "tgmkb":
             units_index = size_str.find(letter)
             if units_index > -1:
                 break
