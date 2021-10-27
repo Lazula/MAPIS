@@ -21,6 +21,7 @@
 
 import os
 import sys
+import shutil
 import argparse
 from os.path import join
 
@@ -200,7 +201,15 @@ def main():
             print(f"No {api} key. Provide it with --{api}-key or in the key directory as {api}_key.txt")
             return 1
 
-    driver = mapis_screenshots.create_headless_firefox_driver()
+    geckodriver_path = shutil.which("geckodriver") or shutil.which("geckodriver.exe")
+    if geckodriver_path:
+        driver = mapis_screenshots.create_headless_firefox_driver()
+    else:
+        driver = None
+
+    if args.screenshot and driver is None:
+        print("Screenshot option given, but geckodriver could not be found in PATH.")
+        return 1
 
     # Purge cache
     if args.purge_cache:
@@ -236,12 +245,15 @@ def main():
             elif target == "redistribution":
                 print(mapis_license_notices.REDISTRIBUTION)
             elif target == "screenshot":
-                if previous_target:
-                    print("Taking screenshots for {previous_target_type}.")
-                    target_screenshot_folder = join(args.screenshot_folder, previous_target_type, previous_target)
-                    mapis_screenshots.screenshot_target(driver, previous_target, previous_target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
+                if driver is None:
+                    print("geckodriver is not installed in your PATH. Cannot take screenshot.")
                 else:
-                    print("The `screenshot` command can only be used if a target has already been provided.")
+                    if previous_target:
+                        print("Taking screenshots for {previous_target_type}.")
+                        target_screenshot_folder = join(args.screenshot_folder, previous_target_type, previous_target)
+                        mapis_screenshots.screenshot_target(driver, previous_target, previous_target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
+                    else:
+                        print("The `screenshot` command can only be used if a target has already been provided.")
             else:
                 print(f"Invalid command {target} (should have been checked by read_targets_stdin)")
 
