@@ -91,6 +91,8 @@ def add_alienvault_otx_data_ip(target_api_data, responses, target):
     url_data = url_response.json() if url_response.status_code == 200 else None
     malware_data = malware_response.json() if malware_response.status_code == 200 else None
 
+    target_api_data["otx"] = dict()
+
     if url_data:
         print_status(True, "alienvault otx url", target)
         target_api_data["otx"]["url"] = url_data
