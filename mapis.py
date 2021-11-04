@@ -203,12 +203,12 @@ def main():
             return 1
 
     geckodriver_path = shutil.which("geckodriver") or shutil.which("geckodriver.exe")
-    if geckodriver_path:
+    if geckodriver_path and args.screenshot:
         driver = mapis_screenshots.create_headless_firefox_driver()
     else:
         driver = None
 
-    if args.screenshot and driver is None:
+    if args.screenshot and geckodriver_path is None:
         print("Screenshot option given, but geckodriver could not be found in PATH.")
         return 1
 
@@ -247,11 +247,14 @@ def main():
             elif target == "redistribution":
                 print(mapis_license_notices.REDISTRIBUTION)
             elif target == "screenshot":
-                if driver is None:
+                if geckodriver_path is None:
                     print("geckodriver is not installed in your PATH. Cannot take screenshot.")
                 else:
                     if previous_target:
-                        print("Taking screenshots for {previous_target_type}.")
+                        if driver is None:
+                            print("Initializing geckodriver.")
+                            driver = mapis_screenshots.create_headless_firefox_driver()
+                        print(f"Taking screenshots for {previous_target}.")
                         target_screenshot_folder = join(args.screenshot_folder, previous_target_type, previous_target)
                         mapis_screenshots.screenshot_target(driver, previous_target, previous_target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
                     else:
