@@ -74,13 +74,13 @@ def add_virustotal_data(target_api_data, response, target):
         print_status(False, "shodan", target, '"API Error"')
     else:
         print_status(True, "virustotal", target)
-        target_api_data["virustotal"] = response
+        target_api_data["vt"] = response
 
 
 def add_threatcrowd_data(target_api_data, response, target):
     if response.status_code == 200:
         print_status(True, "threatcrowd", target)
-        target_api_data["threatcrowd"] = response.json()
+        target_api_data["tc"] = response.json()
     else:
         print_status(False, "threatcrowd", target, response.status_code)
 
@@ -93,13 +93,13 @@ def add_alienvault_otx_data_ip(target_api_data, responses, target):
 
     if url_data:
         print_status(True, "alienvault otx url", target)
-        target_api_data["alienvault_otx"]["url"] = url_data
+        target_api_data["otx"]["url"] = url_data
     else:
         print_status(False, "alienvault otx url", target, url_response.status_code)
 
     if malware_data:
         print_status(True, "alienvault otx malware", target)
-        target_api_data["alienvault_otx"]["malware"] = malware_data
+        target_api_data["otx"]["malware"] = malware_data
     else:
         print_status(False, "alienvault otx malware", target, malware_response.status_code)
 

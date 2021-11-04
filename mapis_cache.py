@@ -67,7 +67,7 @@ def bytes_to_readable(size_bytes):
     return f"{size_bytes:.2f}".rstrip("0") + binary_units[i]
 
 
-def get_cache_entry(cache_folder, target, verbose=False):
+def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
     try:
         cache_file_name = ".".join([target, "cache.json"])
         cache_file_path = join(cache_folder, cache_file_name)
@@ -75,6 +75,14 @@ def get_cache_entry(cache_folder, target, verbose=False):
             target_data_dict = json.load(cache_file)
         if verbose:
             print(f"Found cache hit for {target}")
+
+        if api_list is not None:
+            # list() is needed to avoid an error from changing the dict while
+            # looping through it
+            for api in list(target_data_dict["target_api_data"].keys()):
+                if api not in api_list:
+                    del target_data_dict["target_api_data"][api]
+
         return target_data_dict
     except FileNotFoundError:
         if verbose:

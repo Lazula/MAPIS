@@ -334,14 +334,14 @@ def print_target_data(target_data_dict):
     if "shodan" in target_api_data:
         print_shodan(target_api_data["shodan"], target)
 
-    if "virustotal" in target_api_data:
-        print_virustotal(target_api_data["virustotal"], target, target_type)
+    if "vt" in target_api_data:
+        print_virustotal(target_api_data["vt"], target, target_type)
 
-    if "threatcrowd" in target_api_data:
-        print_threatcrowd(target_api_data["threatcrowd"], target, target_type)
+    if "tc" in target_api_data:
+        print_threatcrowd(target_api_data["tc"], target, target_type)
 
-    if "alienvault_otx" in target_api_data:
-        print_alienvault_otx(target_api_data["alienvault_otx"], target, target_type)
+    if "otx" in target_api_data:
+        print_alienvault_otx(target_api_data["otx"], target, target_type)
 
     if "xforce" in target_api_data:
         print_xforce(target_api_data["xforce"], target, target_type)
