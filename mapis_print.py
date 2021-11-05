@@ -47,7 +47,6 @@ colorama properties."""
     colorama.Style.DIM = ""
 
 
-# TODO use "".join()
 def format_dict_output(key_style, key, value_style, value):
     output =   "".join([
         f"{key_style}" if key_style else colorama.Style.NORMAL,
@@ -71,10 +70,10 @@ def print_ip_api(ip_api_data):
 
     for name, key in parameters.items():
         print(format_dict_output(key_style=colorama.Style.BRIGHT + colorama.Fore.WHITE,
-                                 key=name,
-                                 value_style=colorama.Fore.WHITE,
-                                 value=ip_api_data[key]),
-              end="\n\n")
+                key=name,
+                value_style=colorama.Fore.WHITE,
+                value=ip_api_data[key]))
+    print()
 
 
 def print_shodan(api_data, target):
@@ -91,10 +90,10 @@ def print_shodan(api_data, target):
 
     for name, key in parameters.items():
         print(format_dict_output(key_style=colorama.Style.BRIGHT + colorama.Fore.MAGENTA,
-                                 key=name,
-                                 value_style=colorama.Fore.MAGENTA,
-                                 value=api_data.get(key, "Not found")),
-              end="\n\n")
+                key=name,
+                value_style=colorama.Fore.MAGENTA,
+                value=api_data.get(key, "Not found")))
+    print()
 
 
 def print_virustotal(api_data, target, target_type):
@@ -231,7 +230,7 @@ def print_alienvault_otx_ip(target_url_api_data, target_malware_api_data, target
     else:
         print(f"{colorama.Style.BRIGHT}{colorama.Fore.LIGHTRED_EX}No hashes found for {target}")
 
-    print(f"{colorama.Fore.LIGHTBLACK_EX}https://otx.alienvault.com/indicator/ip/{target}\n")
+    print(f"\n{colorama.Fore.LIGHTBLACK_EX}https://otx.alienvault.com/indicator/ip/{target}\n")
 
 
 def print_alienvault_otx_hash(general_data, analysis_data, target):
@@ -306,7 +305,7 @@ def print_alienvault_otx_hash(general_data, analysis_data, target):
     else:
         print(f"No analysis data available for {target}")
 
-    print(f"{colorama.Fore.LIGHTBLACK_EX}https://otx.alienvault.com/indicator/file/{target}\n")
+    print(f"\n{colorama.Fore.LIGHTBLACK_EX}https://otx.alienvault.com/indicator/file/{target}\n")
 
 
 def print_alienvault_otx(alienvault_otx_data, target, target_type):
@@ -316,7 +315,6 @@ def print_alienvault_otx(alienvault_otx_data, target, target_type):
         print_alienvault_otx_ip(alienvault_otx_data["url"], alienvault_otx_data["malware"], target)
     else:
         print_alienvault_otx_hash(alienvault_otx_data["general"], alienvault_otx_data["analysis"], target)
-    print()
 
 
 def print_target_data(target_data_dict):
