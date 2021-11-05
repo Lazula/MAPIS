@@ -36,39 +36,56 @@ import mapis_screenshots
 import mapis_cache
 import mapis_license_notices
 
-# Map internal API names to printable strings
-SUPPORTED_APIS = {
-    "ip_api": "IP-API",
-    "shodan": "Shodan",
-    "vt":     "VirusTotal",
-    "tc":     "ThreatCrowd",
-    "otx":    "AlienVault OTX",
-    #"xforce": "XForce",
+APIS = {
+    "ip_api": {
+        "name": "IP-API",
+        "key_needed": False,
+        "target_types": [ "address" ],
+    },
+
+    "shodan": {
+        "name": "Shodan",
+        "key_needed": True,
+        "target_types": [ "address" ],
+    },
+
+    "vt": {
+        "name": "VirusTotal",
+        "key_needed": True,
+        "target_types": [ "address", "hash" ],
+    },
+
+    "tc": {
+        "name": "ThreatCrowd",
+        "key_needed": False,
+        "target_types": [ "address", "hash" ],
+    },
+
+    "otx": {
+        "name": "AlienVault OTX",
+        "key_needed": False,
+        "target_types": [ "address", "hash" ],
+    }
+
+    #"xforce": {
+    #    "name": "XForce",
+    #    "key_needed": True,
+    #    "target_types": [ "address", "hash" ],
+    #},
 }
 
-# Same as SUPPORTED_APIS, but only APIs that require keys
+# APIS but only for those with key_needed
 KEY_APIS = {
-    "shodan": "Shodan",
-    "vt":     "VirusTotal",
-    #"xforce": "XForce",
+    api: data
+        for api, data in APIS.items()
+        if data["key_needed"]
 }
-
-# Appropriate target types for each API
-API_TARGET_TYPES = {
-    "ip_api": [ "address" ],
-    "shodan": [ "address" ],
-    "vt":     [ "address", "hash" ],
-    "tc":     [ "address", "hash" ],
-    "otx":    [ "address", "hash" ],
-    #"xforce": [ "address", "hash" ],
-}
-
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")
     parser.add_argument("-c", "--color", action="store_true", help="Enable color output")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(SUPPORTED_APIS.keys()), metavar="API[,API...]")
+    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(APIS.keys()), metavar="API[,API...]")
     parser.add_argument("-p", "--purge-cache", action="store_true", help="Purge cache (delete all previously cached results.")
 
     target_args = parser.add_mutually_exclusive_group()
@@ -78,9 +95,10 @@ def parse_arguments():
 
     key_args = parser.add_argument_group(description="Key arguments.")
     key_args.add_argument("--keydir", type=str, help="Directory which stores API key files (name format: <api_name>_key.txt). Other key options will override these files.", default="API_KEYS")
-    key_args.add_argument("--shodan-key", type=str, help="Shodan API key (overrides keyfile).")
-    key_args.add_argument("--vt-key", type=str, help="VirusTotal API key (overrides keyfile).")
-    #key_args.add_argument("--xforce-key", type=str, help="XForce API key (overrides keyfile).")
+    # Generate key arguments automatically
+    for api, data in KEY_APIS.items():
+        name = data["name"]
+        key_args.add_argument(f"--{api}-key", type=str, help=f"{name} API key (overrides keyfile).")
 
     # TODO time this
     screenshot_args = parser.add_argument_group(description="Screenshot arguments. Screenshots slow down lookups significantly - it is recommended to only use them after confirmation. Screenshots are not subject to quota limitations at this time.")
@@ -117,23 +135,24 @@ def parse_arguments():
 
     if args.api_list:
         args.api_list = args.api_list.split(",")
-    else:
-        args.api_list = SUPPORTED_APIS.keys()
 
-    for api in args.api_list:
-        if api not in SUPPORTED_APIS.keys():
-            parser.print_help()
-            print(f"\nInvalid API {api} provided in -a/--api-list.")
-            raise RuntimeError
+        # Only need to check if list was explicitly provided
+        for api in args.api_list:
+            if api not in APIS.keys():
+                parser.print_help()
+                print(f"\nInvalid API {api} provided in -a/--api-list.")
+                raise RuntimeError
+    else:
+        args.api_list = list(APIS.keys())
 
     if not args.keydir:
-        for api, name in KEY_APIS.items():
+        for api, data in KEY_APIS.items():
+            name = data["name"]
             if api in args.api_list and not vars(args).get(f"{api}_key"):
                 parser.print_help()
                 print(f"\n{name} key missing.")
                 print("You must specify an existing key directory if you have not provided all API keys.")
                 raise RuntimeError
-
     if not (args.stdin or args.target_list or args.target_file):
         parser.print_help()
         print("\nNo targets specified.")
@@ -225,7 +244,9 @@ def main():
     quota_size = mapis_cache.readable_to_bytes(args.disk_quota_size)
     current_disk_usage = None
 
-    vt_client = vt.Client(keys["vt"])
+    if "vt" in args.api_list:
+        vt_client = vt.Client(keys["vt"])
+
     previous_target = None
     previous_target_type = None
 
@@ -301,7 +322,8 @@ def main():
             }
 
         # Make requests and record in target data
-        for api, types in API_TARGET_TYPES.items():
+        for api, data in APIS.items():
+            types = data["target_types"]
             if api not in args.api_list:
                 continue
 
@@ -326,7 +348,8 @@ def main():
         # Print all found data
         mapis_print.print_target_data(target_data_dict)
 
-    vt_client.close()
+    if "vt" in args.api_list:
+        vt_client.close()
 
 if __name__ == "__main__":
     main()
