@@ -1,4 +1,4 @@
-colorama
-requests
-vt-py
-selenium
+colorama==0.4.6
+requests==2.31.0
+vt-py==0.17.5
+selenium==4.12.0

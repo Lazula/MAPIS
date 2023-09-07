@@ -8,6 +8,14 @@ emphasize the ability to record and report findings, e.g. by optionally
 writing responses to disk and taking screenshots of web endpoints. MAPIS aims
 to be highly configurable and adaptable to various workflows.
 
+## Setup
+
+```
+$ python -m venv .
+$ source bin/activate
+$ pip install -r requirements.txt
+```
+
 ## Usage
 
 Note that both IP addresses and hashes can be queried - the program is smart

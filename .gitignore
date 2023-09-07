@@ -1,0 +1,11 @@
+.*
+!.gitignore
+__pycache__
+API_KEYS
+screenshots
+response_cache
+geckodriver.log
+bin
+lib
+lib64
+pyvenv.cfg
