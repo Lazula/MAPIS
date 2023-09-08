@@ -341,9 +341,6 @@ def print_target_data(target_data_dict):
     if "otx" in target_api_data:
         print_alienvault_otx(target_api_data["otx"], target, target_type)
 
-    if "xforce" in target_api_data:
-        print_xforce(target_api_data["xforce"], target, target_type)
-
     print(f"{colorama.Style.BRIGHT}{'-'*20}")
     print(f"{colorama.Style.BRIGHT}End of API Report for {target}")
     print(f"{colorama.Style.BRIGHT}{'-'*20}")

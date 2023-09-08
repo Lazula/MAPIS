@@ -53,12 +53,6 @@ APIS = {
         "key_needed": False,
         "target_types": [ "address", "hash" ],
     }
-
-    #"xforce": {
-    #    "name": "XForce",
-    #    "key_needed": True,
-    #    "target_types": [ "address", "hash" ],
-    #},
 }
 
 # APIS but only for those with key_needed
@@ -200,22 +194,3 @@ def request_alienvault_otx(target, target_type, dry_run=False):
         raise ValueError(f"Target type {target_type} not supported.")
 
     return responses
-
-
-def request_xforce(target, target_type, key, dry_run=False):
-    return dummy_response(b'xforce dummy response placeholder')
-    """
-    if target_type == "address":
-        if dry_run:
-            response = dummy_response(b'xforce dummy response placeholder')
-        else:
-            response = requests.get(f"https://api.xforce.ibmcloud.com/ipr/{target}")
-            #authstring = base64.encodestring(xforceapi.xfex_cred).replace('\n', '')
-            #headers = {"Authorization": "Bearer {key}", "Accept": "application/json", "User-Agent": "Mozilla 5.0"}
-    elif target_type == "hash":
-        raise NotImplementedError
-    else:
-        raise ValueError(f"Target type {target_type} not supported.")
-
-    return response
-    """
