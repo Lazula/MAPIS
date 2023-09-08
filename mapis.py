@@ -36,50 +36,7 @@ import mapis_screenshots
 import mapis_cache
 import mapis_license_notices
 
-APIS = {
-    "ip_api": {
-        "name": "IP-API",
-        "key_needed": False,
-        "target_types": [ "address" ],
-    },
-
-    "shodan": {
-        "name": "Shodan",
-        "key_needed": True,
-        "target_types": [ "address" ],
-    },
-
-    "vt": {
-        "name": "VirusTotal",
-        "key_needed": True,
-        "target_types": [ "address", "hash" ],
-    },
-
-    "tc": {
-        "name": "ThreatCrowd",
-        "key_needed": False,
-        "target_types": [ "address", "hash" ],
-    },
-
-    "otx": {
-        "name": "AlienVault OTX",
-        "key_needed": False,
-        "target_types": [ "address", "hash" ],
-    }
-
-    #"xforce": {
-    #    "name": "XForce",
-    #    "key_needed": True,
-    #    "target_types": [ "address", "hash" ],
-    #},
-}
-
-# APIS but only for those with key_needed
-KEY_APIS = {
-    api: data
-        for api, data in APIS.items()
-        if data["key_needed"]
-}
+from mapis_requests import APIS, KEY_APIS
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")

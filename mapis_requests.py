@@ -22,7 +22,51 @@
 import requests
 import vt
 
-from mapis import KEY_APIS
+
+APIS = {
+    "ip_api": {
+        "name": "IP-API",
+        "key_needed": False,
+        "target_types": [ "address" ],
+    },
+
+    "shodan": {
+        "name": "Shodan",
+        "key_needed": True,
+        "target_types": [ "address" ],
+    },
+
+    "vt": {
+        "name": "VirusTotal",
+        "key_needed": True,
+        "target_types": [ "address", "hash" ],
+    },
+
+    "tc": {
+        "name": "ThreatCrowd",
+        "key_needed": False,
+        "target_types": [ "address", "hash" ],
+    },
+
+    "otx": {
+        "name": "AlienVault OTX",
+        "key_needed": False,
+        "target_types": [ "address", "hash" ],
+    }
+
+    #"xforce": {
+    #    "name": "XForce",
+    #    "key_needed": True,
+    #    "target_types": [ "address", "hash" ],
+    #},
+}
+
+# APIS but only for those with key_needed
+KEY_APIS = {
+    api: data
+        for api, data in APIS.items()
+        if data["key_needed"]
+}
 
 def dummy_response(content):
     response = requests.models.Response()
