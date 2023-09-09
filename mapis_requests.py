@@ -86,9 +86,9 @@ def make_request(api_name, target, target_type, keys, vt_client=None, dry_run=Fa
         # Special case since key is used for client init
         return request_virustotal(vt_client, target, target_type, dry_run)
     elif api_name in KEY_APIS.keys():
-        return request_func(target, target_type, keys[api_name], dry_run)
+        return request_func(target, target_type, keys[api_name], dry_run=dry_run)
     else:
-        return request_func(target, target_type, dry_run)
+        return request_func(target, target_type, dry_run=dry_run)
 
 
 # Batch api supports up to 100 queries per request,
