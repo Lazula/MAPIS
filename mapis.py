@@ -203,6 +203,8 @@ def main():
 
     if "vt" in args.api_list:
         vt_client = vt.Client(keys["vt"])
+    else:
+        vt_client = None
 
     previous_target = None
     previous_target_type = None
