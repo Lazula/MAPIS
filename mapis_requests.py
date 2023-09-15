@@ -165,12 +165,12 @@ def request_virustotal(client, target, target_type, dry_run=False):
 def request_threatcrowd(target, target_type, dry_run=False):
     if target_type == "address":
         if dry_run:
-            response = dummy_response(b'{"response_code": "1", "resolutions": [{"last_resolved": "2020-01-01", "domain": "example.com"}, {"last_resolved":"2020-01-01", "domain": "example.org"}], "hashes": ["00000000000000000000000000000000", "11111111111111111111111111111111", "22222222222222222222222222222222", "33333333333333333333333333333333"]}')
+            response = dummy_response(b'{"response_code": "1", "votes": "0", "resolutions": [{"last_resolved": "2020-01-01", "domain": "example.com"}, {"last_resolved":"2020-01-01", "domain": "example.org"}], "hashes": ["00000000000000000000000000000000", "11111111111111111111111111111111", "22222222222222222222222222222222", "33333333333333333333333333333333"], "permalink":"http://ci-www.threatcrowd.org/ip.php?ip=127.0.0.1"}')
         else:
             response = requests.get(f"https://www.threatcrowd.org/searchApi/v2/ip/report/?ip={target}")
     elif target_type == "hash":
         if dry_run:
-            response = dummy_response(b'{"response_code":"1", "md5":"00000000000000000000000000000000", "sha1":"0000000000000000000000000000000000000000", "scans":["Trojan.Win32", "Trojan","Backdoor:Win32"], "ips":["10.0.0.1", "192.168.0.1", "172.16.0.1"], "domains":["example.com", "example.org"], "permalink":"https://www.threatcrowd.org/malware.php?md5=00000000000000000000000000000000"}')
+            response = dummy_response(b'{"response_code": "1", "votes": "0", "md5":"00000000000000000000000000000000", "sha1":"0000000000000000000000000000000000000000", "scans":["Trojan.Win32", "Trojan","Backdoor:Win32"], "ips":["10.0.0.1", "192.168.0.1", "172.16.0.1"], "domains":["example.com", "example.org"], "references": ["https://example.com", "https://example.org"], "permalink":"http://ci-www.threatcrowd.org/malware.php?md5=00000000000000000000000000000000"}')
         else:
             response = requests.get(f"https://www.threatcrowd.org/searchApi/v2/file/report/?resource={target}")
     else:
