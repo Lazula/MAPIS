@@ -23,7 +23,8 @@ import os
 import sys
 import shutil
 import argparse
-from os.path import join
+
+from os.path import join as pathjoin
 
 import colorama
 import vt
@@ -141,7 +142,7 @@ def read_keys(args):
         # Otherwise, try to read key from file
         elif args.keydir:
             try:
-                keys[api] = open(join(args.keydir, f"{api}_key.txt")).read().strip()
+                keys[api] = open(pathjoin(args.keydir, f"{api}_key.txt")).read().strip()
             except OSError:
                 # Skip over nonexistent keys silently
                 # Missing key errors are handled outside this function
@@ -235,7 +236,7 @@ def main():
                             print("Initializing geckodriver.")
                             driver = mapis_screenshots.create_headless_firefox_driver()
                         print(f"Taking screenshots for {previous_target}.")
-                        target_screenshot_folder = join(args.screenshot_folder, previous_target_type, previous_target)
+                        target_screenshot_folder = pathjoin(args.screenshot_folder, previous_target_type, previous_target)
                         mapis_screenshots.screenshot_target(driver, previous_target, previous_target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
                     else:
                         print("The `screenshot` command can only be used if a target has already been provided.")
@@ -253,7 +254,7 @@ def main():
 
         if args.screenshot:
             # Format example: folder/address/1.2.3.4/virustotal.png
-            target_screenshot_folder = join(args.screenshot_folder, target_type, target)
+            target_screenshot_folder = pathjoin(args.screenshot_folder, target_type, target)
             mapis_screenshots.screenshot_target(driver, target, target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
 
         print()
