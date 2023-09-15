@@ -73,7 +73,7 @@ def parse_arguments():
     cache_args.add_argument("--no-partial-cache", action="store_true", help="Disable partial cache behavior. By default, if a cached response does not contain information from a requested API, it will make the needed calls. This option forces a cache hit to never make new requests. May result in incomplete results.")
     cache_args.add_argument("--disk-quota", action="store_true", help="Enable disk quota to limit space used by response caching. If not used, it is recommended to periodically clear the cache folder or use -p to purge it automatically at program start.")
     cache_args.add_argument("--disk-quota-size", type=str, help="Maximum disk usage in bytes or human-readable format (case insensitive). Supports base 10 and base 2 units, as well as decimal input, e.g.: 1000, 50.5KB, 800MiB, 5g. Default is 1GiB", default="1GiB")
-    cache_args.add_argument("--disk-quota-strategy", type=str, choices=["fifo", "keep"], help="Determine behavior when disk quota is reached. \"fifo\": Discard oldest cache entries. May cause increased disk wear with small quotas . \"keep\" (default): Do not cache new entries.", default="keep")
+    cache_args.add_argument("--disk-quota-strategy", type=str, choices=["fifo", "keep"], help="Determine behavior when disk quota is reached. \"fifo\": Discard oldest cache entries. May cause increased disk wear with small quotas. \"keep\" (default): Do not cache new entries.", default="keep")
 
     debug_args = parser.add_argument_group(description="Debugging options.")
     debug_args.add_argument("--dry-run", action="store_true", help="Use dummy responses in place of real requests. Disables the screenshot option entirely.")
