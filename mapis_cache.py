@@ -22,7 +22,7 @@
 import os
 import json
 
-from os.path import join
+from os.path import join as pathjoin
 
 cache_files_by_age = list()
 
@@ -70,7 +70,7 @@ def bytes_to_readable(size_bytes):
 def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
     try:
         cache_file_name = ".".join([target, "cache.json"])
-        cache_file_path = join(cache_folder, cache_file_name)
+        cache_file_path = pathjoin(cache_folder, cache_file_name)
         with open(cache_file_path) as cache_file:
             target_data_dict = json.load(cache_file)
         if verbose:
@@ -99,7 +99,7 @@ def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
 def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=None, quota_strategy=None, current_disk_usage=None, verbose=False):
     target = target_data_dict["target"]
     cache_file_name = ".".join([target, "cache.json"])
-    cache_file_path = join(cache_folder, cache_file_name)
+    cache_file_path = pathjoin(cache_folder, cache_file_name)
     cache_data = json.dumps(target_data_dict)
 
     write_to_cache = False
@@ -113,7 +113,7 @@ def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=
         # (lazily put off until needed)
         if not cache_files_by_age:
             # Sort by age - oldest first, newest last
-            cache_files_by_age.extend(sorted([join(cache_folder, item) for item in os.listdir(cache_folder)], key=os.path.getctime))
+            cache_files_by_age.extend(sorted([pathjoin(cache_folder, item) for item in os.listdir(cache_folder)], key=os.path.getctime))
         if current_disk_usage is None:
             current_disk_usage = os.path.getsize(cache_folder)
 
