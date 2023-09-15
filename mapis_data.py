@@ -114,19 +114,19 @@ def add_alienvault_otx_data_hash(target_api_data, responses, target):
 
     if general_data:
         print_status(True, "alienvault otx general", target)
-        target_api_data["alienvault_otx"]["general"] = general_data
+        target_api_data["otx"]["general"] = general_data
     else:
         print_status(False, "alienvault otx general", target, general_response.status_code)
 
     if analysis_data:
         print_status(True, "alienvault otx analysis", target)
-        target_api_data["alienvault_otx"]["analysis"] = analysis_data
+        target_api_data["otx"]["analysis"] = analysis_data
     else:
         print_status(False, "alienvault otx analysis", target, analysis_response.status_code)
 
 
 def add_alienvault_otx_data(target_api_data, responses, target):
-    target_api_data["alienvault_otx"] = dict()
+    target_api_data["otx"] = dict()
 
     # Since we know the target is already good, this recalculation is an
     # acceptable tradeoff for the simplicity of keeping parameters uniform
