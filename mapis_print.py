@@ -22,190 +22,349 @@
 import colorama
 import itertools
 
-def disable_color():
+from copy import deepcopy
+from dataclasses import dataclass
+
+STORED_FORE: colorama.ansi.AnsiFore = deepcopy(colorama.Fore)
+
+def disable_color() -> None:
     """This is VERY hacky and probably a terrible idea but it works.
 It hijacks ALL color, for the entire program since it directly modifies the
 colorama properties."""
-    colorama.Fore.BLACK = ""
-    colorama.Fore.BLUE = ""
-    colorama.Fore.CYAN = ""
-    colorama.Fore.GREEN = ""
-    colorama.Fore.LIGHTBLACK_EX = ""
-    colorama.Fore.LIGHTBLUE_EX = ""
-    colorama.Fore.LIGHTCYAN_EX = ""
-    colorama.Fore.LIGHTGREEN_EX = ""
-    colorama.Fore.LIGHTMAGENTA_EX = ""
-    colorama.Fore.LIGHTRED_EX = ""
-    colorama.Fore.LIGHTWHITE_EX = ""
-    colorama.Fore.LIGHTYELLOW_EX = ""
-    colorama.Fore.MAGENTA = ""
-    colorama.Fore.RED = ""
-    colorama.Fore.RESET = ""
-    colorama.Fore.WHITE = ""
-    colorama.Fore.YELLOW = ""
-    colorama.Style.BRIGHT = ""
-    colorama.Style.DIM = ""
+    for color_name in vars(colorama.Fore):
+        colorama.Fore.__dict__[color_name] = ""
 
 
-def format_dict_output(key_style, key, value_style, value):
-    output =   "".join([
-        f"{key_style}" if key_style else colorama.Style.NORMAL,
-        f"{key}: ",
-        f"{value_style}" if value_style else colorama.Style.NORMAL,
-        f"{value}",
+def enable_color() -> None:
+    colorama.Fore = STORED_FORE
+
+
+@dataclass
+class PrintStyle:
+    key_style: str = colorama.Style.NORMAL
+    key_color: str = colorama.Fore.RESET
+    value_style: str = colorama.Style.NORMAL
+    value_color: str = colorama.Fore.RESET
+
+
+# TODO: should be a method on PrintStyle
+def format_dict_output(key, value, print_style: PrintStyle = None) -> str:
+    if print_style is None:
+        print_style = PrintStyle()
+
+    return "".join([
+        print_style.key_style,
+        print_style.key_color,
+        str(key),
+        colorama.Style.NORMAL + colorama.Fore.RESET,
+        ": ",
+        print_style.value_style,
+        print_style.value_color,
+        str(value),
     ])
 
-    return output
+
+IP_API_PARAMS = { "ISP": "isp", "ASN": "as", "Country Code": "countryCode",
+                "Country": "country", "Region Code": "region",
+                "Region": "regionName", "Zip Code": "zip",
+                "Time Zone": "timezone", "Latitude": "lat",
+                "Longitude": "lon" }
 
 
-def print_ip_api(ip_api_data):
-    # name: key
-    parameters = { "ISP": "isp", "ASN": "as", "Country Code": "countryCode",
-                   "Country": "country", "Region Code": "region",
-                   "Region": "regionName", "Zip Code": "zip",
-                   "Time Zone": "timezone", "Latitude": "lat",
-                   "Longitude": "lon" }
+class IPAPIStyle:
+    ANNOUNCE = colorama.Style.BRIGHT
 
-    print(f"{colorama.Style.BRIGHT}ip-api.com API Response:")
+    ENTRY = PrintStyle(
+        key_style=colorama.Style.BRIGHT,
+        key_color=colorama.Fore.WHITE,
+        value_color=colorama.Fore.WHITE
+    )
 
-    for name, key in parameters.items():
-        print(format_dict_output(key_style=colorama.Style.BRIGHT + colorama.Fore.WHITE,
-                key=name,
-                value_style=colorama.Fore.WHITE,
-                value=ip_api_data[key]))
+
+class IPAPIStrings:
+    ANNOUNCE = IPAPIStyle.ANNOUNCE + "ip-api.com API Response:"
+
+
+def print_ip_api(api_data):
+    print(IPAPIStrings.ANNOUNCE)
+
+    for name, key in IP_API_PARAMS.items():
+        print(format_dict_output(name, api_data[key], IPAPIStyle.ENTRY))
     print()
 
 
-def print_shodan(api_data, target):
-    print(f"{colorama.Fore.MAGENTA}{colorama.Style.BRIGHT}shodan.io API Response:")
-
-    if "error" in api_data:
-        print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No data found for {target}\n")
-        return
-
-    # name: key
-    parameters = { "Last Update": "last_update", "Open Ports": "ports",
+SHODAN_PARAMS = { "Last Update": "last_update", "Open Ports": "ports",
                    "ISP": "isp", "Hostnames": "hostnames", "Country": "country",
                    "Latitude": "latitude", "Longitude": "longitude" }
 
-    for name, key in parameters.items():
-        print(format_dict_output(key_style=colorama.Style.BRIGHT + colorama.Fore.MAGENTA,
-                key=name,
-                value_style=colorama.Fore.MAGENTA,
-                value=api_data.get(key, "Not found")))
+class ShodanStyle:
+    ANNOUNCE = colorama.Fore.MAGENTA + colorama.Style.BRIGHT
+    NO_DATA = colorama.Fore.LIGHTRED_EX + colorama.Style.BRIGHT
+
+    ENTRY = PrintStyle(
+        key_style=colorama.Style.BRIGHT,
+        key_color=colorama.Fore.MAGENTA,
+        value_color=colorama.Fore.MAGENTA
+    )
+
+
+class ShodanStrings:
+    ANNOUNCE = ShodanStyle.ANNOUNCE + "shodan.io API Response:"
+    NO_DATA = ShodanStyle.NO_DATA + "No data found for {target}"
+
+
+def print_shodan(api_data, target):
+    print(ShodanStrings.ANNOUNCE)
+
+    if "error" in api_data:
+        print(ShodanStrings.NO_DATA.format(target=target))
+        print()
+        return
+
+
+    for name, key in SHODAN_PARAMS.items():
+        print(format_dict_output(name, api_data[key], ShodanStyle.ENTRY))
     print()
+
+
+class VirusTotalStyle:
+    ANNOUNCE = colorama.Fore.LIGHTCYAN_EX + colorama.Style.BRIGHT
+    PERMALINK = colorama.Fore.LIGHTCYAN_EX
+
+    TIMEOUT = PrintStyle(
+        key_style = colorama.Style.BRIGHT,
+        key_color = colorama.Fore.WHITE)
+    UNDETECTED = PrintStyle(
+        key_style = colorama.Style.BRIGHT,
+        key_color = colorama.Fore.WHITE)
+    HARMLESS = PrintStyle(
+        key_style = colorama.Style.BRIGHT,
+        key_color = colorama.Fore.GREEN)
+    SUSPICIOUS = PrintStyle(
+        key_style = colorama.Style.BRIGHT,
+        key_color = colorama.Fore.YELLOW)
+    MALICIOUS = PrintStyle(
+        key_style = colorama.Style.BRIGHT,
+        key_color = colorama.Fore.LIGHTRED_EX)
+
+
+class VirusTotalStrings:
+    ANNOUNCE = VirusTotalStyle.ANNOUNCE + "VirusTotal API Response:"
+    PERMALINK_ADDRESS = VirusTotalStyle.PERMALINK + "https://www.virustotal.com/gui/ip-address/{target}/detection"
+    PERMALINK_HASH = VirusTotalStyle.PERMALINK + "https://www.virustotal.com/gui/file/{target}/detection"
+
+
+VIRUSTOTAL_PARAMS = (
+    ("timeout", "Timed Out", VirusTotalStyle.TIMEOUT),
+    ("undetected", "Undetected", VirusTotalStyle.UNDETECTED),
+    ("harmless", "Harmless", VirusTotalStyle.HARMLESS),
+    ("suspicious", "Suspicious", VirusTotalStyle.SUSPICIOUS),
+    ("malicious", "Malicious", VirusTotalStyle.MALICIOUS)
+)
 
 
 def print_virustotal(api_data, target, target_type):
-    print(f"{colorama.Fore.LIGHTCYAN_EX}{colorama.Style.BRIGHT}VirusTotal API Response:")
+    print(VirusTotalStrings.ANNOUNCE)
 
-    parameter_sets = [
-        ["timeout", "Timed Out", colorama.Fore.WHITE],
-        ["undetected", "Undetected", colorama.Fore.WHITE],
-        ["harmless", "Harmless", colorama.Fore.GREEN],
-        ["suspicious", "Suspicious", colorama.Fore.YELLOW],
-        ["malicious", "Malicious", colorama.Fore.LIGHTRED_EX]
-    ]
-
-    for parameters in parameter_sets:
-        print(format_dict_output(key_style=colorama.Style.BRIGHT + parameters[2],
-                                 key=parameters[1],
-                                 value_style=colorama.Style.NORMAL,
-                                 value=api_data[parameters[0]]))
+    for key, name, style in VIRUSTOTAL_PARAMS:
+        print(format_dict_output(name, api_data[key], style))
 
     if target_type == "address":
-        print(f"{colorama.Fore.LIGHTCYAN_EX}https://www.virustotal.com/gui/ip-address/{target}/detection", end="\n\n")
+        print(VirusTotalStrings.PERMALINK_ADDRESS.format(target=target))
     elif target_type == "hash":
-        print(f"{colorama.Fore.LIGHTCYAN_EX}https://www.virustotal.com/gui/file/{target}/detection", end="\n\n")
-
-
-def print_threatcrowd_ip(target_api_data, target):
-    if len(target_api_data.get("resolutions", list())) > 0:
-        print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}Domains linked with {target} (first 25):")
-        print(", ".join([ resolution["domain"] for resolution in target_api_data["resolutions"][:25] ]))
-    else:
-        print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No domains found")
+        print(VirusTotalStrings.PERMALINK_HASH.format(target=target))
     print()
 
-    if len(target_api_data.get("hashes", list())) > 0:
-        print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}Hashes linked with {target} (first 25):")
-        print(", ".join(target_api_data["hashes"][:25]))
+
+class ThreatCrowdStyle:
+    ANNOUNCE = colorama.Fore.YELLOW + colorama.Style.BRIGHT
+    NO_RESPONSE = colorama.Fore.RED + colorama.Style.BRIGHT
+
+    class MaliciousVote:
+        MAYBE = colorama.Style.BRIGHT
+        YES = colorama.Style.BRIGHT + colorama.Fore.RED
+        NO = colorama.Style.BRIGHT + colorama.Fore.GREEN
+        UNAVAILABLE = colorama.Style.BRIGHT + colorama.Fore.LIGHTRED_EX
+
+    SECTION_ANNOUNCE = colorama.Fore.WHITE + colorama.Style.DIM
+    SECTION_EMPTY = colorama.Fore.LIGHTRED_EX + colorama.Style.BRIGHT
+
+    ALIAS_ENTRY = PrintStyle(key_style=colorama.Style.BRIGHT, key_color=colorama.Fore.WHITE)
+
+    PERMALINK = colorama.Fore.YELLOW
+
+
+class ThreatCrowdStrings:
+    ANNOUNCE = ThreatCrowdStyle.ANNOUNCE + "ThreatCrowd API Response:"
+    NO_RESPONSE = ThreatCrowdStyle.NO_RESPONSE + "No results found for {target}"
+
+    class MaliciousVote:
+        MAYBE = ThreatCrowdStyle.MaliciousVote.MAYBE + "{target} has even or no maliciousness votes"
+        YES = ThreatCrowdStyle.MaliciousVote.YES + "{target} has been voted malicious"
+        NO = ThreatCrowdStyle.MaliciousVote.NO = "{target} has been voted not malicious"
+        UNAVAILABLE = ThreatCrowdStyle.MaliciousVote.UNAVAILABLE + """Could not process vote data "{given}" (expected "-1", "0", or "1")"""
+
+    DOMAIN_ANNOUNCE = ThreatCrowdStyle.SECTION_ANNOUNCE + "Domains linked with {target} (first 25):"
+    ADDRESS_DOMAIN_ENTRY = "{domain} (resolved {last_resolved})"
+    DOMAIN_EMPTY = ThreatCrowdStyle.SECTION_EMPTY + "No domains found"
+
+    HASH_ANNOUNCE = ThreatCrowdStyle.SECTION_ANNOUNCE + "Hashes linked with {target} (first 25):"
+    HASH_EMPTY = ThreatCrowdStyle.SECTION_EMPTY + "No hashes found"
+    #PERMALINK_ADDRESS = ThreatCrowdStyle.PERMALINK + "http://ci-www.threatcrowd.org/ip.php?ip={target}"
+
+    ALIAS_ANNOUNCE = ThreatCrowdStyle.SECTION_ANNOUNCE + "Alias hashes for {target}:"
+    SCAN_ANNOUNCE = ThreatCrowdStyle.SECTION_ANNOUNCE + "Scan results for {target} (first 25):"
+    SCAN_EMPTY = ThreatCrowdStyle.SECTION_EMPTY + "No scan results"
+    ADDRESSES_ANNOUNCE = ThreatCrowdStyle.SECTION_ANNOUNCE + "IP addresses linked with {target} (first 25):"
+    ADDRESSES_EMPTY = ThreatCrowdStyle.SECTION_EMPTY + "No related IP addresses"
+    REFERENCE_ANNOUNCE = ThreatCrowdStyle.SECTION_ANNOUNCE + "References for {target} (first 25):"
+    REFERENCE_EMPTY = ThreatCrowdStyle.SECTION_EMPTY + "No references found"
+    #PERMALINK_HASH = ThreatCrowdStyle.PERMALINK + "http://ci-www.threatcrowd.org/malware.php?md5={target}"
+
+
+def print_threatcrowd_address(target_api_data, target):
+    # TODO: option to show more than 25
+    resolutions = target_api_data["resolutions"]
+    if len(resolutions) > 0:
+        print(ThreatCrowdStrings.DOMAIN_ANNOUNCE.format(target=target))
+        print(", ".join((
+            ThreatCrowdStrings.ADDRESS_DOMAIN_ENTRY.format(**resolution)
+            for resolution in resolutions[:25]
+        )))
     else:
-        print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No hashes found")
+        print(ThreatCrowdStrings.DOMAIN_EMPTY)
+    print()
+
+    hashes = target_api_data["hashes"]
+    if len(hashes) > 0:
+        print(ThreatCrowdStrings.HASH_ANNOUNCE.format(target=target))
+        print(", ".join(hashes[:25]))
+    else:
+        print(ThreatCrowdStrings.HASH_EMPTY)
     print()
 
 
 def print_threatcrowd_hash(target_api_data, target):
-    if len(target_api_data.get("scans", list())) > 0:
-        print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}Scan results for {target} (first 25):")
-        print(", ".join([ scan for scan in target_api_data["scans"][:25] if scan ]))
-    else:
-        print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No scan results")
+    print(ThreatCrowdStrings.ALIAS_ANNOUNCE.format(target=target))
+    print(format_dict_output("MD5", target_api_data["md5"], ThreatCrowdStyle.ALIAS_ENTRY))
+    print(format_dict_output("SHA1", target_api_data["sha1"], ThreatCrowdStyle.ALIAS_ENTRY))
+    print()
 
-    if len(target_api_data.get("domains", list())) > 0:
-        print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}Domains linked with {target} (first 25):")
-        print(", ".join([ domain for domain in target_api_data["domains"][:25] if domain ]))
+    scans = target_api_data["scans"][:25]
+    if len(scans) > 0:
+        print(ThreatCrowdStrings.SCAN_ANNOUNCE.format(target=target))
+        print(", ".join(scans))
     else:
-        print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No domains found")
+        print(ThreatCrowdStrings.SCAN_EMPTY)
+    print()
 
-    if len(target_api_data.get("references", list())) > 0:
-        print(f"{colorama.Fore.WHITE}{colorama.Style.DIM}References for {target} (first 25):")
-        print(", ".join([ reference for reference in target_api_data["references"][:25] if reference ]))
+    domains = target_api_data["domains"][:25]
+    if len(domains) > 0:
+        print(ThreatCrowdStrings.DOMAIN_ANNOUNCE.format(target=target))
+        print(", ".join(domains))
     else:
-        print(f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}No references found")
+        print(ThreatCrowdStrings.DOMAIN_EMPTY)
+    print()
+
+    addresses = target_api_data["ips"][:25]
+    if len(addresses) > 0:
+        print(ThreatCrowdStrings.ADDRESSES_ANNOUNCE.format(target=target))
+        print(", ".join(addresses))
+    else:
+        print(ThreatCrowdStrings.ADDRESSES_EMPTY)
+    print()
+
+    references = target_api_data["references"][:25]
+    if len(references) > 0:
+        print(ThreatCrowdStrings.REFERENCE_ANNOUNCE.format(target=target))
+        print(", ".join(references))
+    else:
+        print(ThreatCrowdStrings.REFERENCE_EMPTY)
     print()
 
 
 def print_threatcrowd(target_api_data, target, target_type):
-    print(f"{colorama.Fore.YELLOW}{colorama.Style.BRIGHT}ThreatCrowd API Response:")
+    print(ThreatCrowdStrings.ANNOUNCE)
 
     if target_api_data["response_code"] == "0":
-        print(f"{colorama.Fore.RED}{colorama.Style.BRIGHT}No results found for {target}\n")
+        print(ThreatCrowdStrings.NO_RESPONSE.format(target=target))
+        print()
         return
 
     try:
-        if target_api_data["votes"] == 0:
-            print(f"{colorama.Style.BRIGHT}{target} has even or no maliciousness votes.")
-        elif target_api_data["votes"] == -1:
-            print(f"{colorama.Fore.RED}{colorama.Style.BRIGHT}{target} has been voted malicious.")
-        elif target_api_data["votes"] == 1:
-            print(f"{colorama.Fore.GREEN}{colorama.Style.BRIGHT}{target} has been voted not malicious.")
+        if target_api_data["votes"] == "0":
+            print(ThreatCrowdStrings.MaliciousVote.MAYBE.format(target=target))
+        elif target_api_data["votes"] == "-1":
+            print(ThreatCrowdStrings.MaliciousVote.YES.format(target=target))
+        elif target_api_data["votes"] == "1":
+            print(ThreatCrowdStrings.MaliciousVote.NO.format(target=target))
         else:
-            print(f'{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}Could not process vote data "{target_api_data["votes"]}" (expected -1, 0, or 1).')
+            print(ThreatCrowdStrings.MaliciousVote.UNAVAILABLE.format(given=target_api_data["votes"]))
+        print()
     except KeyError:
-        pass
+        pass # TODO show not found
 
     if target_type == "address":
-        print_threatcrowd_ip(target_api_data, target)
+        print_threatcrowd_address(target_api_data, target)
     elif target_type == "hash":
         print_threatcrowd_hash(target_api_data, target)
+    # TODO: no catching branch here
 
     try:
-        print(f'{colorama.Fore.YELLOW}{target_api_data["permalink"]}')
+        print(ThreatCrowdStyle.PERMALINK + target_api_data["permalink"])
     except KeyError:
         pass
 
     print()
 
 
-def print_alienvault_otx_ip(target_url_api_data, target_malware_api_data, target):
+class AlienVaultOTXStyle:
+    ANNOUNCE = colorama.Fore.LIGHTBLACK_EX + colorama.Style.BRIGHT
+    SECTION_ANNOUNCE = colorama.Fore.LIGHTBLACK_EX
+    SECTION_EMPTY = colorama.Fore.LIGHTRED_EX
+
+    GENERAL_ENTRY = PrintStyle(key_style=colorama.Style.BRIGHT)
+    ANALYSIS_ENTRY = PrintStyle(key_style=colorama.Style.BRIGHT)
+
+    PERMALINK = colorama.Fore.LIGHTBLACK_EX + colorama.Style.BRIGHT
+
+
+class AlienVaultOTXStrings:
+    ANNOUNCE = AlienVaultOTXStyle.ANNOUNCE + "AlienVault OTX API Response:"
+
+    DOMAIN_ANNOUNCE = AlienVaultOTXStyle.SECTION_ANNOUNCE + "Domains linked to {target}:"
+    DOMAIN_EMPTY = AlienVaultOTXStyle.SECTION_EMPTY + "No domains found for {target}"
+    HASH_ANNOUNCE = AlienVaultOTXStyle.SECTION_ANNOUNCE + "Hashes linked to {target}:"
+    HASH_EMPTY = AlienVaultOTXStyle.SECTION_EMPTY + "No hashes found for {target}"
+
+    GENERAL_ANNOUNCE = AlienVaultOTXStyle.SECTION_ANNOUNCE + "General data for {target}:"
+    GENERAL_EMPTY = AlienVaultOTXStyle.SECTION_EMPTY + "No general data for {target}"
+    ANALYSIS_ANNOUNCE = AlienVaultOTXStyle.SECTION_ANNOUNCE + "Analysis data for {target}:"
+    ANALYSIS_EMPTY = AlienVaultOTXStyle.SECTION_EMPTY + "No analysis data for {target}"
+
+    PERMALINK_ADDRESS = AlienVaultOTXStyle.PERMALINK + "https://otx.alienvault.com/indicator/ip/{target}"
+    PERMALINK_HASH = AlienVaultOTXStyle.PERMALINK + "https://otx.alienvault.com/indicator/file/{target}"
+
+
+def print_alienvault_otx_address(target_url_api_data, target_malware_api_data, target):
+    # TODO: move data processing
     # Process url data
     unique_domains = list()
-    for url_entry in target_url_api_data["url_list"]:
+    for url_entry in target_url_api_data.get("url_list", list()):
         if url_entry["domain"] not in unique_domains and len(url_entry["domain"]) > 0:
             unique_domains.append(url_entry["domain"])
 
     if len(unique_domains) > 0:
-        print(f"{colorama.Style.BRIGHT}Domains linked to {target}:")
-        for domain in unique_domains:
-            print(domain)
+        print(AlienVaultOTXStrings.DOMAIN_ANNOUNCE.format(target=target))
+        print("\n".join(unique_domains))
     else:
-        print(f"{colorama.Style.BRIGHT}{colorama.Fore.LIGHTRED_EX}No domains found for {target}")
+        print(AlienVaultOTXStrings.DOMAIN_EMPTY.format(target=target))
+    print()
 
     # Process malware data
     hashes = list()
     detections = list()
-    for entry in target_malware_api_data["data"]:
+    for entry in target_malware_api_data.get("data", list()):
         if entry["hash"] not in hashes:
             hashes.append(entry["hash"])
             detections.append(entry["detections"])
@@ -224,51 +383,56 @@ def print_alienvault_otx_ip(target_url_api_data, target_malware_api_data, target
         output_lines.append(output_line)
 
     if len(output_lines) > 0:
-        print(f"{colorama.Style.BRIGHT}Hashes linked to {target}:")
-        for line in output_lines:
-            print(line)
+        print(AlienVaultOTXStrings.HASH_ANNOUNCE.format(target=target))
+        print(*output_lines, sep="\n")
     else:
-        print(f"{colorama.Style.BRIGHT}{colorama.Fore.LIGHTRED_EX}No hashes found for {target}")
+        print(AlienVaultOTXStrings.HASH_EMPTY.format(target=target))
+    print()
 
-    print(f"\n{colorama.Fore.LIGHTBLACK_EX}https://otx.alienvault.com/indicator/ip/{target}\n")
+    print(AlienVaultOTXStrings.PERMALINK_ADDRESS.format(target=target))
+    print()
 
 
 def print_alienvault_otx_hash(general_data, analysis_data, target):
-    pulse_data = general_data["pulse_info"]
-    pulses = pulse_data["pulses"]
+    # TODO: all of this data processing doesnt belong here
+    pulse_data = general_data.get("pulse_info", dict())
+    pulses = pulse_data.get("pulses", dict())
 
     names = [ pulse["name"] for pulse in pulses ]
     descriptions = [ pulse["description"] for pulse in pulses ]
-    tags = list(itertools.chain.from_iterable([ pulse["tags"] for pulse in pulses ]))
-    malware_families = list(itertools.chain.from_iterable(
-                            [ v["malware_families"] for v in pulse_data["related"].values() ]))
-    adversaries = list(itertools.chain.from_iterable(
-                       [ v["adversary"] for v in pulse_data["related"].values() ]))
+    tags = list(itertools.chain.from_iterable((pulse["tags"] for pulse in pulses)))
+    malware_families = list(itertools.chain.from_iterable((
+        v["malware_families"] for v in pulse_data["related"].values()
+    ))) if "related" in pulse_data else list()
+    adversaries = list(itertools.chain.from_iterable((
+        v["adversary"] for v in pulse_data["related"].values()
+    ))) if "related" in pulse_data else list()
 
     general_output = {
-        "Pulse count": pulse_data["count"],
-        "Pulse names": ", ".join(names) if len(names) > 0 else "No names found",
-        "Pulse tags": ", ".join(tags) if len(tags) > 0 else "No tags found",
-        "Pulse descriptions": str(descriptions).strip("[]") if len(descriptions) > 0 else "No descriptions available",
-        "Malware families": ", ".join(malware_families) if len(malware_families) > 0 else "No malware families identified",
-        "Adversaries": ", ".join(adversaries) if len(adversaries) > 0 else "No adversaries identified"
+        "Pulse count": pulse_data.get("count", "0"),
+        "Pulse names": ", ".join(names) if names else "No names found",
+        "Pulse tags": ", ".join(tags) if tags else "No tags found",
+        "Pulse descriptions": ", ".join(( f'"{d}"' for d in descriptions)) if descriptions else "No descriptions available",
+        "Malware families": ", ".join(malware_families) if malware_families else "No malware families identified",
+        "Adversaries": ", ".join(adversaries) if adversaries else "No adversaries identified"
     }
 
-    if analysis_data["analysis"]:
+    if analysis_data.get("analysis"):
         analysis_info = analysis_data["analysis"]["info"]["results"]
         analysis_plugins = analysis_data["analysis"]["plugins"]
         analysis_pe32info = analysis_plugins["pe32info"]["results"]
         analysis_yarad = analysis_plugins["yarad"]["results"]
         analysis_peanomal = analysis_plugins["peanomal"]["results"]
 
-        packers = analysis_pe32info.get("packers", list())
+        packers = analysis_pe32info.get("packers")
         yara_rule_names = [ x["rule_name"] for x in analysis_yarad["detection"] ]
 
+    # TODO: check fragility
     try:
         analysis_output = {
             "File class": analysis_info["file_class"],
             "File type": analysis_info["file_type"],
-            "File size": str(analysis_info["filesize"]) + " bytes",
+            "File size": f'{analysis_info["filesize"]} bytes', # TODO: human readable
             "MD5 hash": analysis_info["md5"],
             "SHA1 hash": analysis_info["sha1"],
             "SHA256 hash": analysis_info["sha256"],
@@ -277,44 +441,73 @@ def print_alienvault_otx_hash(general_data, analysis_data, target):
             "PEHash": analysis_pe32info["pehash"],
             "Rich PEHash": analysis_pe32info.get("richhash", "No Rich PEHash"),
             "Anomalies detected by PEAnomal": analysis_peanomal["anomalies"],
+            "Packers": ", ".join(packers) if packers else "No packers detected",
             "YARA compression rule detections": sum(1 for x in analysis_yarad["detection"]
                                                     if "category" in x and "compression" in x["category"]),
             "YARA code overlap rule detections": sum(1 for x in analysis_yarad["detection"]
                                                      if "category" in x and "CodeOverlap" in x["category"]),
-            "Packers": ", ".join(packers) if len(packers) > 0 else "No packers detected",
-            "YARA rule detection names": ", ".join(yara_rule_names) if len(yara_rule_names) > 0 else "No YARA rules detected"
+            "YARA rule detection names": ", ".join(yara_rule_names) if yara_rule_names else "No YARA rules detected"
         }
     except NameError: # catch having no definitions from no analysis above
         analysis_output = None
 
-    print("General data:")
-    for key, value in general_output.items():
-        print(format_dict_output(key_style=colorama.Style.BRIGHT,
-                                 key=key,
-                                 value_style=None,
-                                 value=value))
+    if general_output:
+        print(AlienVaultOTXStrings.GENERAL_ANNOUNCE.format(target=target))
+        print("\n".join((
+            format_dict_output(key, value, AlienVaultOTXStyle.GENERAL_ENTRY)
+            for key, value in general_output.items()
+        )))
+    else:
+        print(AlienVaultOTXStrings.GENERAL_EMPTY.format(target=target))
     print()
 
     if analysis_output:
-        print("Analysis data:")
-        for key, value in analysis_output.items():
-            print(format_dict_output(key_style=colorama.Style.BRIGHT,
-                                     key=key,
-                                     value_style=None,
-                                     value=value))
+        print(AlienVaultOTXStrings.ANALYSIS_ANNOUNCE.format(target=target))
+        print("\n".join((
+            format_dict_output(key, value, AlienVaultOTXStyle.ANALYSIS_ENTRY)
+            for key, value in analysis_output.items()
+        )))
     else:
-        print(f"No analysis data available for {target}")
+        print(AlienVaultOTXStrings.ANALYSIS_EMPTY.format(target=target))
+    print()
 
-    print(f"\n{colorama.Fore.LIGHTBLACK_EX}https://otx.alienvault.com/indicator/file/{target}\n")
+    print(AlienVaultOTXStrings.PERMALINK_HASH.format(target=target))
+    print()
 
 
 def print_alienvault_otx(alienvault_otx_data, target, target_type):
-    print(f"{colorama.Fore.LIGHTBLACK_EX}{colorama.Style.BRIGHT}AlienVault OTX API Response:")
+    print(AlienVaultOTXStrings.ANNOUNCE)
 
     if target_type == "address":
-        print_alienvault_otx_ip(alienvault_otx_data["url"], alienvault_otx_data["malware"], target)
-    else:
+        print_alienvault_otx_address(alienvault_otx_data["url"], alienvault_otx_data["malware"], target)
+    elif target_type == "hash":
         print_alienvault_otx_hash(alienvault_otx_data["general"], alienvault_otx_data["analysis"], target)
+
+
+class PrintTargetStyle:
+    DIVIDER = colorama.Style.BRIGHT
+    ANNOUNCE = colorama.Style.BRIGHT
+    EMPTY = colorama.Style.BRIGHT + colorama.Fore.LIGHTRED_EX
+    FINISH = colorama.Style.BRIGHT
+
+
+class PrintTargetStrings:
+    DIVIDER = PrintTargetStyle.DIVIDER + "-"*20
+    ANNOUNCE = "\n".join((
+        DIVIDER,
+        PrintTargetStyle.ANNOUNCE + "Report for {target}",
+        DIVIDER
+    ))
+    EMPTY = "\n".join((
+        DIVIDER,
+        PrintTargetStyle.EMPTY + "No data available for {target}",
+        DIVIDER
+    ))
+    FINISH = "\n".join((
+        DIVIDER,
+        PrintTargetStyle.FINISH + "End of report for {target}",
+        DIVIDER
+    ))
 
 
 def print_target_data(target_data_dict):
@@ -322,9 +515,11 @@ def print_target_data(target_data_dict):
     target_type = target_data_dict["target_type"]
     target_api_data = target_data_dict["target_api_data"]
 
-    print(f"{colorama.Style.BRIGHT}{'-'*20}")
-    print(f"{colorama.Style.BRIGHT}API Report for {target}")
-    print(f"{colorama.Style.BRIGHT}{'-'*20}")
+    print(PrintTargetStrings.ANNOUNCE.format(target=target))
+    print()
+
+    if not target_api_data:
+        print(PrintTargetStrings.EMPTY.format(target=target))
 
     if "ip_api" in target_api_data:
         print_ip_api(target_api_data["ip_api"])
@@ -341,7 +536,5 @@ def print_target_data(target_data_dict):
     if "otx" in target_api_data:
         print_alienvault_otx(target_api_data["otx"], target, target_type)
 
-    print(f"{colorama.Style.BRIGHT}{'-'*20}")
-    print(f"{colorama.Style.BRIGHT}End of API Report for {target}")
-    print(f"{colorama.Style.BRIGHT}{'-'*20}")
+    print(PrintTargetStrings.FINISH.format(target=target))
     print()
