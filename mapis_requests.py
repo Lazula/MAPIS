@@ -108,6 +108,9 @@ def request_ip_api(target, target_type, dry_run=False):
 
 
 def request_shodan(target, target_type, key, history=False, minify=True, dry_run=False):
+    if key is None and not dry_run:
+        return None
+
     if target_type == "address":
         if dry_run:
             response = dummy_response(b'{"last_update":"2020-01-01T00:00:00.000000", "ports":[22,80,443], "isp":"TEST_ISP", "hostnames":"TEST_HOSTNAME", "country":"TEST_COUNTRY", "latitude":12, "longitude":34}')
@@ -125,6 +128,9 @@ def request_shodan(target, target_type, key, history=False, minify=True, dry_run
 
 
 def request_virustotal(client, target, target_type, dry_run=False):
+    if client is None and not dry_run:
+        return None
+
     if target_type == "address":
         if dry_run:
             response = { "timeout":0, "undetected":0, "harmless":0, "suspicious":0, "malicious":0 }
