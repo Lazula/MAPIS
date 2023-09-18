@@ -19,10 +19,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import stat
-import os
-import socket
 import colorama
+import io
+import os
+import stat
+import socket
 
 import mapis_license_notices
 
@@ -67,17 +68,22 @@ def read_targets_stdin():
         yield (target, get_target_type(target))
 
 
-def read_targets_file(file_name):
-    targets_file = open(file_name, "r")
+def read_targets_file(targets_file: os.PathLike | io.TextIOBase):
+    try:
+        targets_file = open(targets_file, "r")
+    except TypeError:
+        # not a path
+        pass
+    # propagate OSError
+
     for line in targets_file:
         target = line.strip()
         target_type = get_target_type(target)
         yield (target, target_type)
 
 
-def read_targets_list(list_arg):
-    targets = list_arg.split(",")
-    for target in targets:
+def read_targets_list(targets: str):
+    for target in targets.split(","):
         target_type = get_target_type(target)
         yield (target, target_type)
 
