@@ -64,7 +64,7 @@ def bytes_to_readable(size_bytes):
     while size_bytes >= 1024 and i < len(binary_units):
         size_bytes /= 1024
         i += 1
-    return f"{size_bytes:.2f}".rstrip("0") + binary_units[i]
+    return f"{size_bytes:.2f}".rstrip("0").rstrip(".") + binary_units[i]
 
 
 def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
