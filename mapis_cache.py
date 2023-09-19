@@ -64,17 +64,33 @@ def bytes_to_readable(size_bytes):
     while size_bytes >= 1024 and i < len(binary_units):
         size_bytes /= 1024
         i += 1
-    return f"{size_bytes:.2f}".rstrip("0") + binary_units[i]
+    return f"{size_bytes:.2f}".rstrip("0").rstrip(".") + binary_units[i]
+
+
+def get_cache_filename(target_data_dict):
+    return f"{target_data_dict['target']}.cache.json"
+
+
+def get_cache_usage(cache_folder):
+    return sum(
+        de.stat().st_size
+        for de in os.scandir(cache_folder)
+        if de.is_file()
+    )
+
+
+def clear_cache_filelist():
+    global cache_files_by_age
+    cache_files_by_age = list()
 
 
 def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
     try:
-        cache_file_name = ".".join([target, "cache.json"])
-        cache_file_path = pathjoin(cache_folder, cache_file_name)
+        cache_file_path = pathjoin(cache_folder, f"{target}.cache.json")
         with open(cache_file_path) as cache_file:
             target_data_dict = json.load(cache_file)
         if verbose:
-            print(f"Found cache hit for {target}")
+            print(f"Found cache hit for {target}.")
 
         if api_list is not None:
             # list() is needed to avoid an error from changing the dict while
@@ -86,7 +102,7 @@ def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
         return target_data_dict
     except FileNotFoundError:
         if verbose:
-            print(f"Failed to find {target} in cache")
+            print(f"Failed to find {target} in cache.")
     except json.JSONDecodeError:
         if verbose:
             print(f"Failed to load {target} from cache due to malformed JSON.")
@@ -96,46 +112,50 @@ def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
     return
 
 
-def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=None, quota_strategy=None, current_disk_usage=None, verbose=False):
+def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=None, quota_strategy=None, current_disk_usage=None, verbose=False) -> int:
+    """Add a target's data to the on-disk cache. Returns the new disk usage in bytes."""
+
+    global cache_files_by_age
     target = target_data_dict["target"]
-    cache_file_name = ".".join([target, "cache.json"])
+    cache_file_name = f"{target}.cache.json"
     cache_file_path = pathjoin(cache_folder, cache_file_name)
     cache_data = json.dumps(target_data_dict)
 
-    write_to_cache = False
+    write_to_cache = True
     reason = None
 
     if not current_disk_usage:
-        current_disk_usage = os.path.getsize(cache_folder)
+        current_disk_usage = get_cache_usage(cache_folder)
 
     if use_quota:
         # Initialize age listing if not done yet
         # (lazily put off until needed)
-        if not cache_files_by_age:
+        if len(cache_files_by_age) == 0:
             # Sort by age - oldest first, newest last
-            cache_files_by_age.extend(sorted([pathjoin(cache_folder, item) for item in os.listdir(cache_folder)], key=os.path.getctime))
+            cache_files_by_age.extend(sorted((pathjoin(cache_folder, item) for item in os.listdir(cache_folder)), key=os.path.getctime))
         if current_disk_usage is None:
-            current_disk_usage = os.path.getsize(cache_folder)
+            current_disk_usage = get_cache_usage(cache_folder)
 
 
     # Disk quota enabled AND larger than quota
     if use_quota and len(cache_data) > quota_size:
         write_to_cache = False
-        reason = "Cache entry size exceeds quota size."
+        reason = "Cache entry size exceeds quota size"
     # Disk quota enabled AND won't exceed quota
     elif use_quota and current_disk_usage + len(cache_data) <= quota_size:
         write_to_cache = True
-        reason = "Sufficient space."
+        reason = "Sufficient space"
     # Disk quota enabled AND will exceed quota
     elif quota_size:
         # Handle quota strategy
         if quota_strategy == "fifo":
             # Clear oldest entries until we have enough free space
-            while current_disk_usage + len(cache_data) > quota_size:
-                oldest_path = cache_files_by_age[0]
+            while current_disk_usage + len(cache_data) > quota_size and len(cache_files_by_age) > 0:
+                oldest_filename = cache_files_by_age[0]
+                oldest_path = pathjoin(cache_folder, oldest_filename)
                 oldest_path_size = os.path.getsize(oldest_path)
                 if verbose:
-                    print(f"Deleting {oldest_path} according to fifo disk cache strategy.",
+                    print(f"Deleting {oldest_filename} according to fifo disk cache strategy.",
                           f"({bytes_to_readable(oldest_path_size)} cleared)")
                 # Delete the oldest entry from the disk...
                 os.unlink(oldest_path)
@@ -145,17 +165,17 @@ def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=
                 del cache_files_by_age[0]
 
             write_to_cache = True
-            reason = "Cleared space."
+            reason = "Cleared space"
         elif quota_strategy == "keep":
-            if current_disk_usage + len(cache_data) <= quota_size:
-                write_to_cache = True
-                reason = None
+            if current_disk_usage + len(cache_data) > quota_size:
+                write_to_cache = False
+                reason = "Not enough space"
         else:
             raise ValueError(f"use_quota set but no quota_strategy given.")
     # Disk quota disabled
     elif verbose:
         write_to_cache = True
-        reason = "Disk quota not enabled."
+        reason = "Disk quota not enabled"
 
     if write_to_cache:
         with open(cache_file_path, "w") as cache_file:
@@ -165,8 +185,11 @@ def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=
 
     if verbose:
         print(f"Wrote {target} to cache" if write_to_cache else f"Did not write {target} to cache",
-              f"- {reason}." if reason else ".")
-        print(f"Disk quota usage at {bytes_to_readable(current_disk_usage)} of {bytes_to_readable(quota_size)}",
-              f"({current_disk_usage} of {quota_size} bytes)")
+              f"- {reason}."
+              if reason
+              else ".")
+        if use_quota:
+            print(f"Disk quota usage at {bytes_to_readable(current_disk_usage)} of {bytes_to_readable(quota_size)}",
+                f"({current_disk_usage} of {quota_size} bytes)")
 
     return current_disk_usage
