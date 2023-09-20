@@ -53,17 +53,17 @@ class TestPrintStatus(unittest.TestCase):
 
     def test_print_status_success(self):
         self.assertEqual(
-            print_status(True, self.api, self.target),
+            status_string(True, self.api, self.target),
             Strings.SUCCESS.format(api=self.api, target=self.target)
         )
 
 
     def test_print_status_failure(self):
         self.assertEqual(
-            print_status(False, self.api, self.target),
+            status_string(False, self.api, self.target),
             Strings.FAIL.format(api=self.api, target=self.target)
         )
         self.assertEqual(
-            print_status(False, self.api, self.target, status_code=400),
+            status_string(False, self.api, self.target, status_code=400),
             Strings.FAIL_WITH_CODE.format(api=self.api, target=self.target, status_code=400)
         )
