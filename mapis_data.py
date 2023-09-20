@@ -80,9 +80,9 @@ def add_shodan_data(target_api_data, response, target):
 
 def add_virustotal_data(target_api_data, response, target):
     if response == "NotFoundError":
-        status_string(False, "shodan", target, '"Not Found"')
+        status_string(False, "virustotal", target, '"Not Found"')
     elif response == "APIError":
-        status_string(False, "shodan", target, '"API Error"')
+        status_string(False, "virustotal", target, '"API Error"')
     else:
         status_string(True, "virustotal", target)
         target_api_data["vt"] = response
