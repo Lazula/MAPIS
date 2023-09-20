@@ -22,9 +22,8 @@
 import json
 import unittest
 
-import mapis_requests
-
 from mapis_data import *
+from mapis_requests import dummy_response
 
 class TestPrintStatus(unittest.TestCase):
     api = "test_api"
@@ -79,13 +78,13 @@ class TestAddAPIData(unittest.TestCase):
     def test_add_ip_api_data(self):
         target_api_data = dict()
         ip_api_data = {"key": "value"}
-        response = mapis_requests.dummy_response(json.dumps(ip_api_data).encode())
+        response = dummy_response(json.dumps(ip_api_data).encode())
         add_ip_api_data(target_api_data, response, self.target)
         self.assertEqual(target_api_data["ip_api"], ip_api_data)
 
         target_api_data = dict()
         ip_api_data = {"key": "value"}
-        response = mapis_requests.dummy_response(json.dumps(ip_api_data).encode())
+        response = dummy_response(json.dumps(ip_api_data).encode())
         response.status_code = 400
         add_ip_api_data(target_api_data, response, self.target)
         self.assertFalse("ip_api" in target_api_data)
@@ -94,13 +93,13 @@ class TestAddAPIData(unittest.TestCase):
     def test_add_shodan_data(self):
         target_api_data = dict()
         shodan_data = {"key": "value"}
-        response = mapis_requests.dummy_response(json.dumps(shodan_data).encode())
+        response = dummy_response(json.dumps(shodan_data).encode())
         add_shodan_data(target_api_data, response, self.target)
         self.assertEqual(target_api_data["shodan"], shodan_data)
 
         target_api_data = dict()
         shodan_data = {"key": "value"}
-        response = mapis_requests.dummy_response(json.dumps(shodan_data).encode())
+        response = dummy_response(json.dumps(shodan_data).encode())
         response.status_code = 400
         add_shodan_data(target_api_data, response, self.target)
         self.assertFalse("shodan" in target_api_data)
@@ -127,13 +126,13 @@ class TestAddAPIData(unittest.TestCase):
     def test_add_threatcrowd_data(self):
         target_api_data = dict()
         threatcrowd_data = {"key": "value"}
-        response = mapis_requests.dummy_response(json.dumps(threatcrowd_data).encode())
+        response = dummy_response(json.dumps(threatcrowd_data).encode())
         add_threatcrowd_data(target_api_data, response, self.target)
         self.assertEqual(target_api_data["tc"], threatcrowd_data)
 
         target_api_data = dict()
         threatcrowd_data = {"key": "value"}
-        response = mapis_requests.dummy_response(json.dumps(threatcrowd_data).encode())
+        response = dummy_response(json.dumps(threatcrowd_data).encode())
         response.status_code = 400
         add_threatcrowd_data(target_api_data, response, self.target)
         self.assertFalse("tc" in target_api_data)
@@ -143,8 +142,8 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
         url_data = {"key1": "value1"}
         malware_data = {"key2": "value2"}
-        url_response = mapis_requests.dummy_response(json.dumps(url_data).encode())
-        malware_response = mapis_requests.dummy_response(json.dumps(malware_data).encode())
+        url_response = dummy_response(json.dumps(url_data).encode())
+        malware_response = dummy_response(json.dumps(malware_data).encode())
         responses = (url_response, malware_response)
         add_alienvault_otx_data(target_api_data, responses, self.target)
         expected_otx_data = {
@@ -156,9 +155,9 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
         url_data = {"key1": "value1"}
         malware_data = {"key2": "value2"}
-        url_response = mapis_requests.dummy_response(json.dumps(url_data).encode())
+        url_response = dummy_response(json.dumps(url_data).encode())
         url_response.status_code = 400
-        malware_response = mapis_requests.dummy_response(json.dumps(malware_data).encode())
+        malware_response = dummy_response(json.dumps(malware_data).encode())
         responses = (url_response, malware_response)
         add_alienvault_otx_data(target_api_data, responses, self.target)
         expected_otx_data = {
@@ -169,8 +168,8 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
         url_data = {"key1": "value1"}
         malware_data = {"key2": "value2"}
-        url_response = mapis_requests.dummy_response(json.dumps(url_data).encode())
-        malware_response = mapis_requests.dummy_response(json.dumps(malware_data).encode())
+        url_response = dummy_response(json.dumps(url_data).encode())
+        malware_response = dummy_response(json.dumps(malware_data).encode())
         malware_response.status_code = 400
         responses = (url_response, malware_response)
         add_alienvault_otx_data(target_api_data, responses, self.target)
@@ -182,9 +181,9 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
         url_data = {"key1": "value1"}
         malware_data = {"key2": "value2"}
-        url_response = mapis_requests.dummy_response(json.dumps(url_data).encode())
+        url_response = dummy_response(json.dumps(url_data).encode())
         url_response.status_code = 400
-        malware_response = mapis_requests.dummy_response(json.dumps(malware_data).encode())
+        malware_response = dummy_response(json.dumps(malware_data).encode())
         malware_response.status_code = 400
         responses = (url_response, malware_response)
         add_alienvault_otx_data(target_api_data, responses, self.target)
@@ -195,8 +194,8 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
         general_data = {"key1": "value2"}
         analysis_data = {"key2": "value2"}
-        general_response = mapis_requests.dummy_response(json.dumps(general_data).encode())
-        analysis_response = mapis_requests.dummy_response(json.dumps(analysis_data).encode())
+        general_response = dummy_response(json.dumps(general_data).encode())
+        analysis_response = dummy_response(json.dumps(analysis_data).encode())
         responses = (general_response, analysis_response)
         add_alienvault_otx_data(target_api_data, responses, self.target_hash)
         expected_otx_data = {
@@ -208,9 +207,9 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
         general_data = {"key1": "value1"}
         analysis_data = {"key2": "value2"}
-        general_response = mapis_requests.dummy_response(json.dumps(general_data).encode())
+        general_response = dummy_response(json.dumps(general_data).encode())
         general_response.status_code = 400
-        analysis_response = mapis_requests.dummy_response(json.dumps(analysis_data).encode())
+        analysis_response = dummy_response(json.dumps(analysis_data).encode())
         responses = (general_response, analysis_response)
         add_alienvault_otx_data(target_api_data, responses, self.target_hash)
         expected_otx_data = {
@@ -221,8 +220,8 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
         general_data = {"key1": "value1"}
         analysis_data = {"key2": "value2"}
-        general_response = mapis_requests.dummy_response(json.dumps(general_data).encode())
-        analysis_response = mapis_requests.dummy_response(json.dumps(analysis_data).encode())
+        general_response = dummy_response(json.dumps(general_data).encode())
+        analysis_response = dummy_response(json.dumps(analysis_data).encode())
         analysis_response.status_code = 400
         responses = (general_response, analysis_response)
         add_alienvault_otx_data(target_api_data, responses, self.target_hash)
@@ -234,9 +233,9 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
         general_data = {"key1": "value1"}
         analysis_data = {"key2": "value2"}
-        general_response = mapis_requests.dummy_response(json.dumps(general_data).encode())
+        general_response = dummy_response(json.dumps(general_data).encode())
         general_response.status_code = 400
-        analysis_response = mapis_requests.dummy_response(json.dumps(analysis_data).encode())
+        analysis_response = dummy_response(json.dumps(analysis_data).encode())
         analysis_response.status_code = 400
         responses = (general_response, analysis_response)
         add_alienvault_otx_data(target_api_data, responses, self.target_hash)
@@ -247,11 +246,11 @@ class TestAddAPIData(unittest.TestCase):
         target_api_data = dict()
 
         ip_api_data = {"key": "value"}
-        ip_api_response = mapis_requests.dummy_response(json.dumps(ip_api_data).encode())
+        ip_api_response = dummy_response(json.dumps(ip_api_data).encode())
         add_api_data("ip_api", target_api_data, ip_api_response, self.target)
 
         shodan_data = {"key": "value"}
-        shodan_response = mapis_requests.dummy_response(json.dumps(shodan_data).encode())
+        shodan_response = dummy_response(json.dumps(shodan_data).encode())
         add_shodan_data(target_api_data, shodan_response, self.target)
 
         virustotal_data = { "timeout":0, "undetected":0, "harmless":0, "suspicious":0, "malicious":0 }
@@ -259,13 +258,13 @@ class TestAddAPIData(unittest.TestCase):
         add_virustotal_data(target_api_data, virustotal_response, self.target)
 
         threatcrowd_data = {"key": "value"}
-        threatcrowd_response = mapis_requests.dummy_response(json.dumps(threatcrowd_data).encode())
+        threatcrowd_response = dummy_response(json.dumps(threatcrowd_data).encode())
         add_threatcrowd_data(target_api_data, threatcrowd_response, self.target)
 
         url_data = {"key1": "value1"}
         malware_data = {"key2": "value2"}
-        url_response = mapis_requests.dummy_response(json.dumps(url_data).encode())
-        malware_response = mapis_requests.dummy_response(json.dumps(malware_data).encode())
+        url_response = dummy_response(json.dumps(url_data).encode())
+        malware_response = dummy_response(json.dumps(malware_data).encode())
         alienvault_otx_responses = (url_response, malware_response)
         add_alienvault_otx_data(target_api_data, alienvault_otx_responses, self.target)
 
@@ -290,13 +289,13 @@ class TestAddAPIData(unittest.TestCase):
         add_virustotal_data(target_api_data, virustotal_response, self.target_hash)
 
         threatcrowd_data = {"key": "value"}
-        threatcrowd_response = mapis_requests.dummy_response(json.dumps(threatcrowd_data).encode())
+        threatcrowd_response = dummy_response(json.dumps(threatcrowd_data).encode())
         add_threatcrowd_data(target_api_data, threatcrowd_response, self.target_hash)
 
         general_data = {"key1": "value1"}
         analysis_data = {"key2": "value2"}
-        general_response = mapis_requests.dummy_response(json.dumps(general_data).encode())
-        analysis_response = mapis_requests.dummy_response(json.dumps(analysis_data).encode())
+        general_response = dummy_response(json.dumps(general_data).encode())
+        analysis_response = dummy_response(json.dumps(analysis_data).encode())
         alienvault_otx_responses = (general_response, analysis_response)
         add_alienvault_otx_data(target_api_data, alienvault_otx_responses, self.target_hash)
 
