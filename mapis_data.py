@@ -102,7 +102,8 @@ def add_alienvault_otx_data_ip(target_api_data, responses, target):
     url_data = url_response.json() if url_response.status_code == 200 else None
     malware_data = malware_response.json() if malware_response.status_code == 200 else None
 
-    target_api_data["otx"] = dict()
+    if url_data or malware_data:
+        target_api_data["otx"] = dict()
 
     if url_data:
         status_string(True, "alienvault otx url", target)
@@ -123,6 +124,9 @@ def add_alienvault_otx_data_hash(target_api_data, responses, target):
     general_data = general_response.json() if general_response.status_code == 200 else None
     analysis_data = analysis_response.json() if analysis_response.status_code == 200 else None
 
+    if general_data or analysis_data:
+        target_api_data["otx"] = dict()
+
     if general_data:
         status_string(True, "alienvault otx general", target)
         target_api_data["otx"]["general"] = general_data
@@ -137,8 +141,6 @@ def add_alienvault_otx_data_hash(target_api_data, responses, target):
 
 
 def add_alienvault_otx_data(target_api_data, responses, target):
-    target_api_data["otx"] = dict()
-
     # Since we know the target is already good, this recalculation is an
     # acceptable tradeoff for the simplicity of keeping parameters uniform
     target_type = get_target_type(target)
