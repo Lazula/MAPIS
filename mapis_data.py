@@ -27,16 +27,22 @@ class Style:
     SUCCESS = colorama.Style.BRIGHT + colorama.Fore.GREEN
     FAIL = colorama.Style.BRIGHT + colorama.Fore.LIGHTRED_EX
 
-SUCCESS_STYLE = f"{colorama.Style.BRIGHT}{colorama.Fore.GREEN}"
-FAIL_STYLE = f"{colorama.Style.BRIGHT}{colorama.Fore.LIGHTRED_EX}"
 
-def print_status(success: bool, api: str, target: str, status_code: int = None):
-    output = "".join([
-        f"{SUCCESS_STYLE}Successful " if success else f"{FAIL_STYLE}Failed ",
-        f"{api} request for {target}",
-        f" with error code {status_code}" if status_code else ""
-    ])
-    return output
+class Strings:
+    SUCCESS = Style.SUCCESS + "Successful {api} request for {target}"
+    FAIL = Style.FAIL + "Failed {api} request for {target}"
+    FAIL_WITH_CODE = Style.FAIL + "Failed {api} request for {target} with error code {status_code}"
+
+
+def print_status(success: bool, api: str, target: str, status_code: int | str = None):
+    kwargs = { "api": api, "target": target, "status_code": status_code }
+    if success:
+        return Strings.SUCCESS.format(**kwargs)
+    else:
+        if status_code is not None:
+            return Strings.FAIL_WITH_CODE.format(**kwargs)
+        else:
+            return Strings.FAIL.format(**kwargs)
 
 
 def add_api_data(api_name, target_api_data, response, target):

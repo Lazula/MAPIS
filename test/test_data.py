@@ -28,8 +28,6 @@ class TestPrintStatus(unittest.TestCase):
     target = "target_name"
 
     def test_constants(self):
-        self.assertEqual(Style.SUCCESS, SUCCESS_STYLE)
-        self.assertEqual(Style.FAIL, FAIL_STYLE)
         self.assertEqual(
             Style.SUCCESS,
             colorama.Style.BRIGHT + colorama.Fore.GREEN
@@ -39,20 +37,33 @@ class TestPrintStatus(unittest.TestCase):
             colorama.Style.BRIGHT + colorama.Fore.LIGHTRED_EX
         )
 
+        self.assertEqual(
+            Strings.SUCCESS,
+            Style.SUCCESS + "Successful {api} request for {target}"
+        )
+        self.assertEqual(
+            Strings.FAIL,
+            Style.FAIL + "Failed {api} request for {target}"
+        )
+        self.assertEqual(
+            Strings.FAIL_WITH_CODE,
+            Style.FAIL + "Failed {api} request for {target} with error code {status_code}"
+        )
+
 
     def test_print_status_success(self):
         self.assertEqual(
             print_status(True, self.api, self.target),
-            f"{Style.SUCCESS}Successful {self.api} request for {self.target}"
+            Strings.SUCCESS.format(api=self.api, target=self.target)
         )
 
 
     def test_print_status_failure(self):
         self.assertEqual(
             print_status(False, self.api, self.target),
-            f"{Style.FAIL}Failed {self.api} request for {self.target}"
+            Strings.FAIL.format(api=self.api, target=self.target)
         )
         self.assertEqual(
             print_status(False, self.api, self.target, status_code=400),
-            f"{Style.FAIL}Failed {self.api} request for {self.target} with error code 400"
+            Strings.FAIL_WITH_CODE.format(api=self.api, target=self.target, status_code=400)
         )
