@@ -23,15 +23,20 @@ import colorama
 
 from mapis_io import get_target_type
 
-SUCCESS_STYLE = f"{colorama.Fore.GREEN}{colorama.Style.BRIGHT}"
-FAIL_STYLE = f"{colorama.Fore.LIGHTRED_EX}{colorama.Style.BRIGHT}"
+class Style:
+    SUCCESS = colorama.Style.BRIGHT + colorama.Fore.GREEN
+    FAIL = colorama.Style.BRIGHT + colorama.Fore.LIGHTRED_EX
 
-def print_status(success, api, target, status_code=None):
+SUCCESS_STYLE = f"{colorama.Style.BRIGHT}{colorama.Fore.GREEN}"
+FAIL_STYLE = f"{colorama.Style.BRIGHT}{colorama.Fore.LIGHTRED_EX}"
+
+def print_status(success: bool, api: str, target: str, status_code: int = None):
     output = "".join([
         f"{SUCCESS_STYLE}Successful " if success else f"{FAIL_STYLE}Failed ",
         f"{api} request for {target}",
-        f"with error code {status_code}" if status_code else ""
+        f" with error code {status_code}" if status_code else ""
     ])
+    return output
 
 
 def add_api_data(api_name, target_api_data, response, target):
