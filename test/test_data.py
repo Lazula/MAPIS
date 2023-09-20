@@ -51,14 +51,14 @@ class TestPrintStatus(unittest.TestCase):
         )
 
 
-    def test_print_status_success(self):
+    def test_status_string_success(self):
         self.assertEqual(
             status_string(True, self.api, self.target),
             Strings.SUCCESS.format(api=self.api, target=self.target)
         )
 
 
-    def test_print_status_failure(self):
+    def test_status_string_failure(self):
         self.assertEqual(
             status_string(False, self.api, self.target),
             Strings.FAIL.format(api=self.api, target=self.target)
