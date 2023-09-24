@@ -24,6 +24,8 @@ import json
 
 from os.path import join as pathjoin
 
+from mapis_types import *
+
 cache_files_by_age = list()
 
 readable_size_units = {
@@ -84,13 +86,13 @@ def clear_cache_filelist():
     cache_files_by_age = list()
 
 
-def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
+def get_cache_entry(cache_folder: str, target: Target, api_list: list[str] = None, verbose: bool = False) -> dict[str, dict]:
     try:
-        cache_file_path = pathjoin(cache_folder, f"{target}.cache.json")
+        cache_file_path = pathjoin(cache_folder, f"{target.name}.cache.json")
         with open(cache_file_path) as cache_file:
             target_data_dict = json.load(cache_file)
         if verbose:
-            print(f"Found cache hit for {target}.")
+            print(f"Found cache hit for {target.name}.")
 
         if api_list is not None:
             # list() is needed to avoid an error from changing the dict while
@@ -102,29 +104,29 @@ def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
         return target_data_dict
     except FileNotFoundError:
         if verbose:
-            print(f"Failed to find {target} in cache.")
+            print(f"Failed to find {target.name} in cache.")
     except json.JSONDecodeError:
         if verbose:
-            print(f"Failed to load {target} from cache due to malformed JSON.")
+            print(f"Failed to load {target.name} from cache due to malformed JSON.")
     except Exception as err:
         if verbose:
             print(f"Unexpected error while getting cache entry:\n{repr(err)}")
     return
 
 
-def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=None, quota_strategy=None, current_disk_usage=None, verbose=False) -> int:
+def put_cache_entry(cache_folder: str, target_data_dict: dict[str, dict], use_quota: bool = False, quota_size: bool = None, quota_strategy: bool = None, current_disk_usage: int = None, verbose: bool = False) -> int:
     """Add a target's data to the on-disk cache. Returns the new disk usage in bytes."""
 
     global cache_files_by_age
-    target = target_data_dict["target"]
-    cache_file_name = f"{target}.cache.json"
+    target: Target = target_data_dict["target"]
+    cache_file_name = f"{target.name}.cache.json"
     cache_file_path = pathjoin(cache_folder, cache_file_name)
     cache_data = json.dumps(target_data_dict)
 
     write_to_cache = True
     reason = None
 
-    if not current_disk_usage:
+    if current_disk_usage is None:
         current_disk_usage = get_cache_usage(cache_folder)
 
     if use_quota:
@@ -184,7 +186,7 @@ def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=
         current_disk_usage += os.path.getsize(cache_file_path)
 
     if verbose:
-        print(f"Wrote {target} to cache" if write_to_cache else f"Did not write {target} to cache",
+        print(f"Wrote {target.name} to cache" if write_to_cache else f"Did not write {target.name} to cache",
               f"- {reason}."
               if reason
               else ".")

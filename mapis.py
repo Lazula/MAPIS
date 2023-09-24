@@ -38,6 +38,7 @@ import mapis_cache
 import mapis_license_notices
 
 from mapis_requests import APIS, KEY_APIS
+from mapis_types import *
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")
@@ -88,29 +89,31 @@ def parse_arguments():
     if not args.color:
         mapis_print.disable_color()
 
+    # FIXME: give a real error
     if not os.path.isdir(args.keydir):
         args.keydir = None
 
     if args.api_list:
-        args.api_list = args.api_list.split(",")
-
-        # Only need to check if list was explicitly provided
-        for api in args.api_list:
-            if api not in APIS.keys():
-                parser.print_help()
-                print(f"\nInvalid API {api} provided in -a/--api-list.")
-                raise RuntimeError
+        try:
+            args.api_list = (
+                API.from_id(_id)
+                for _id in args.api_list.split(",")
+            )
+        except ValueError as ve:
+            parser.print_help()
+            print(f"\nInvalid API {ve.args[0]} provided in -a/--api-list.")
+            raise RuntimeError
     else:
-        args.api_list = list(APIS.keys())
+        args.api_list = tuple(APIS.keys())
 
     if not args.keydir:
-        for api, data in KEY_APIS.items():
-            name = data["name"]
-            if api in args.api_list and not vars(args).get(f"{api}_key"):
+        for api_id in KEY_APIS.keys():
+            if api in args.api_list and not vars(args).get(f"{api_id}_key"):
                 parser.print_help()
-                print(f"\n{name} key missing.")
+                print(f"\n{api_id} key missing.")
                 print("You must specify an existing key directory if you have not provided all API keys.")
                 raise RuntimeError
+
     if not (args.stdin or args.target_list or args.target_file):
         parser.print_help()
         print("\nNo targets specified.")
@@ -160,6 +163,8 @@ def main():
         print("Error encountered during argument parsing.")
         return 1
 
+    targets = None
+
     # Only one input method is allowed at once, so only one of these will run.
     if args.stdin:
         targets = mapis_io.read_targets_stdin()
@@ -169,6 +174,9 @@ def main():
 
     if args.target_file:
         targets = mapis_io.read_targets_file(args.target_file)
+
+    if targets is None:
+        raise RuntimeError
 
     keys = read_keys(args)
 
@@ -207,17 +215,16 @@ def main():
     else:
         vt_client = None
 
-    previous_target = None
-    previous_target_type = None
+    previous_target: Target = None
 
-    for (target, target_type) in targets:
-        if not target_type:
-            print(f'Failed to parse "{target}" as IP address, hash, or command.')
+    for target in targets:
+        if target.type is None:
+            print(f'Failed to parse "{target.name}" as IP address, hash, or command.')
             continue
 
         # Process commands
-        if target_type == "command":
-            target = target.lower()
+        if target.type == TargetType.Command:
+            target.name = target.name.lower()
             if target == "help":
                 for command, help_text in mapis_io.INTERACTIVE_COMMANDS.items():
                     print(command, ": ", help_text, sep="")
@@ -235,27 +242,29 @@ def main():
                         if driver is None:
                             print("Initializing geckodriver.")
                             driver = mapis_screenshots.create_headless_firefox_driver()
-                        print(f"Taking screenshots for {previous_target}.")
-                        target_screenshot_folder = pathjoin(args.screenshot_folder, previous_target_type, previous_target)
-                        mapis_screenshots.screenshot_target(driver, previous_target, previous_target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
+                        print(f"Taking screenshots for {previous_target.name}.")
+                        target_screenshot_folder = pathjoin(args.screenshot_folder, previous_target.type, previous_target.name)
+                        mapis_screenshots.screenshot_target(driver, previous_target, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
                     else:
                         print("The `screenshot` command can only be used if a target has already been provided.")
             else:
-                print(f"Invalid command {target} (should have been checked by read_targets_stdin)")
+                print(f"Invalid command {target.name} (should have been checked by read_targets_stdin)")
 
             print()
             # Following code applies only to lookups
             continue
 
-        previous_target, previous_target_type = target, target_type
+        previous_target = target
 
-        print(f"{colorama.Style.BRIGHT}Looking up \"{target}\"...")
+        print(f"{colorama.Style.BRIGHT}Looking up \"{target.name}\"...")
         print()
 
         if args.screenshot:
             # Format example: folder/address/1.2.3.4/virustotal.png
-            target_screenshot_folder = pathjoin(args.screenshot_folder, target_type, target)
-            mapis_screenshots.screenshot_target(driver, target, target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
+            screenshot_folder = pathjoin(args.screenshot_folder, target.type, target.name)
+            mapis_screenshots.screenshot_target(driver,
+                target, screenshot_folder,
+                verbose=args.verbose, overwrite=args.force_screenshot)
 
         print()
 
@@ -277,7 +286,6 @@ def main():
         if not cache_hit:
             target_data_dict = {
                 "target": target,
-                "target_type": target_type,
                 "target_api_data": dict()
             }
 
@@ -293,8 +301,8 @@ def main():
                     print(f"{api} data already cached.")
                 continue
 
-            if target_type in types:
-                response = mapis_requests.make_request(api, target, target_type, keys,
+            if target.type in types:
+                response = mapis_requests.make_request(api, target, keys,
                         vt_client=vt_client, dry_run=args.dry_run)
                 mapis_data.add_api_data(api, target_data_dict["target_api_data"], response, target)
 

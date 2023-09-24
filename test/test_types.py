@@ -20,27 +20,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
-import tempfile
 
-from io import StringIO
+from mapis_types import *
 
-from mapis_io import *
 
-class TestIO(unittest.TestCase):
-    names = (
-        "127.0.0.1",
-        "10.0.0.1",
-        "172.16.0.1",
-        "192.168.0.1",
-        "0000",
-        "1111",
-        "2222",
-        "3333",
-        "invalid",
-        "help"
-    )
-
-    expected = (
+class TestTarget(unittest.TestCase):
+    targets = (
         Target("127.0.0.1", TargetType.Address),
         Target("10.0.0.1", TargetType.Address),
         Target("172.16.0.1", TargetType.Address),
@@ -53,22 +38,30 @@ class TestIO(unittest.TestCase):
         Target("help", TargetType.Command)
     )
 
-    def test_read_targets_file(self):
-        targets_file = tempfile.NamedTemporaryFile(mode="w+")
-        targets_file.write("\n".join(self.names))
-        targets_file.seek(0)
-
-        # Use file
-        result = tuple(read_targets_file(targets_file))
-        self.assertEqual(result, self.expected)
-
-        # Use path
-        # NOTE: the tempfile is removed when closed inside here
-        result = tuple(read_targets_file(os.path.join(tempfile.tempdir, targets_file.name)))
-        self.assertEqual(result, self.expected)
-        targets_file.seek(0)
+    def test_target_deduce_type(self):
+        for target in self.targets:
+            self.assertEqual(Target.deduce_type(target.name), target.type)
 
 
-    def test_read_targets_list(self):
-        result = tuple(read_targets_list(",".join(self.names)))
-        self.assertEqual(result, self.expected)
+class TestUnsupportedTargetTypeError(unittest.TestCase):
+    def test_unsupported_target_type_error(self):
+        def raiser(target_type: TargetType):
+            if target_type is not TargetType.Address:
+                raise UnsupportedTargetTypeError(target_type)
+            return True
+        self.assertTrue(raiser(TargetType.Address))
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            raiser,
+            TargetType.Hash
+        )
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            raiser,
+            TargetType.Command
+        )
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            raiser,
+            None
+        )

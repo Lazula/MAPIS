@@ -22,45 +22,24 @@
 import requests
 import vt
 
+from mapis_types import *
 
-APIS = {
-    "ip_api": {
-        "name": "IP-API",
-        "key_needed": False,
-        "target_types": [ "address" ],
-    },
 
-    "shodan": {
-        "name": "Shodan",
-        "key_needed": True,
-        "target_types": [ "address" ],
-    },
-
-    "vt": {
-        "name": "VirusTotal",
-        "key_needed": True,
-        "target_types": [ "address", "hash" ],
-    },
-
-    "tc": {
-        "name": "ThreatCrowd",
-        "key_needed": False,
-        "target_types": [ "address", "hash" ],
-    },
-
-    "otx": {
-        "name": "AlienVault OTX",
-        "key_needed": False,
-        "target_types": [ "address", "hash" ],
-    }
+APIS: dict[API, APIInfo] = {
+    API.IPAPI: APIInfo("IP-API", False, (TargetType.Address)),
+    API.Shodan: APIInfo("Shodan", True, (TargetType.Address)),
+    API.VirusTotal: APIInfo("VirusTotal", True, (TargetType.Address, TargetType.Hash)),
+    API.ThreatCrowd: APIInfo("ThreatCrowd", False, (TargetType.Address, TargetType.Hash)),
+    API.AlienVault: APIInfo("AlienVault OTX", False, (TargetType.Address, TargetType.Hash))
 }
 
 # APIS but only for those with key_needed
-KEY_APIS = {
-    api: data
-        for api, data in APIS.items()
-        if data["key_needed"]
+KEY_APIS: dict[API, APIInfo] = {
+    api: info
+        for api, info in APIS.items()
+        if info.key_needed
 }
+
 
 def dummy_response(content):
     response = requests.models.Response()
@@ -68,12 +47,13 @@ def dummy_response(content):
     response._content = content
     return response
 
-def make_request(api_name, target, target_type, keys, vt_client=None, dry_run=False):
+
+def make_request(api_name, target, keys, vt_client=None, dry_run=False):
     request_func_map = {
-        "ip_api": request_ip_api,
-        "shodan": request_shodan,
-        "vt":     True, # Special case, see below
-        "tc":     request_threatcrowd,
+        API.IPAPI: request_ip_api,
+        API.Shodan: request_shodan,
+        API.VirusTotal:     request_virustotal,
+        API.ThreatCrowd:     request_threatcrowd,
         "otx":    request_alienvault_otx,
     }
 
@@ -81,14 +61,13 @@ def make_request(api_name, target, target_type, keys, vt_client=None, dry_run=Fa
         request_func = request_func_map[api_name]
     except KeyError:
         raise ValueError(f"No such API {api_name}")
+    
 
-    if api_name == "vt":
-        # Special case since key is used for client init
-        return request_virustotal(vt_client, target, target_type, dry_run)
-    elif api_name in KEY_APIS.keys():
-        return request_func(target, target_type, keys[api_name], dry_run=dry_run)
+
+    if api_name in KEY_APIS.keys():
+        return request_func(target, keys[api_name], dry_run=dry_run)
     else:
-        return request_func(target, target_type, dry_run=dry_run)
+        return request_func(target, dry_run=dry_run)
 
 
 # Batch api supports up to 100 queries per request,
@@ -127,7 +106,7 @@ def request_shodan(target, target_type, key, history=False, minify=True, dry_run
     return response
 
 
-def request_virustotal(client, target, target_type, dry_run=False):
+def request_virustotal(target: Target, client: vt.Client = None, dry_run: bool = False):
     if client is None and not dry_run:
         return None
 

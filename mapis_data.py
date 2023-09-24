@@ -21,7 +21,7 @@
 
 import colorama
 
-from mapis_io import get_target_type
+from mapis_types import *
 
 class Style:
     SUCCESS = colorama.Style.BRIGHT + colorama.Fore.GREEN
