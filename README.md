@@ -87,7 +87,7 @@ please take existing style and conventions into account.
 ## License (GNU GPLv3 or later)
 
     MAPIS: Multi-API Search - Identify malicious hosts and hashes
-    Copyright (C) 2020-2021 Lazula
+    Copyright (C) 2020-2023 Lazula
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

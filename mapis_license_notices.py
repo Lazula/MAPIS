@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #
 # MAPIS: Multi-API Search - Identify malicious hosts and hashes
-# Copyright (C) 2020-2021 Lazula <26179473+Lazula@users.noreply.github.com>
+# Copyright (C) 2020-2023 Lazula <26179473+Lazula@users.noreply.github.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 INTERACTIVE_MODE = """\
 MAPIS: Multi-API Search - Identify malicious hosts and hashes
-Copyright (C) 2020-2021 Lazula <26179473+Lazula@users.noreply.github.com>
+Copyright (C) 2020-2023 Lazula <26179473+Lazula@users.noreply.github.com>
 This program comes with ABSOLUTELY NO WARRANTY; for details type `warranty`.
 This is free software, and you are welcome to redistribute it
 under certain conditions; type `redistribution` for details.
