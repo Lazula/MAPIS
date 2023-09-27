@@ -131,21 +131,22 @@ def parse_arguments():
     return args
 
 
-def read_keys(args):
+def read_keys(args) -> dict[API, str]:
     keys = dict()
 
     for api in KEY_APIS.keys():
         if api not in args.api_list:
             continue
 
+        api_id = APIS[api].id
         # First, check for keys given in arguments
-        arg_key = vars(args).get(f"{api}_key")
+        arg_key = vars(args).get(f"{api_id}_key")
         if arg_key:
             keys[api] = arg_key
         # Otherwise, try to read key from file
         elif args.keydir:
             try:
-                keys[api] = open(pathjoin(args.keydir, f"{api}_key.txt")).read().strip()
+                keys[api] = open(pathjoin(args.keydir, f"{api_id}_key.txt")).read().strip()
             except OSError:
                 # Skip over nonexistent keys silently
                 # Missing key errors are handled outside this function

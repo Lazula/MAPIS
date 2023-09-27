@@ -32,6 +32,7 @@ INTERACTIVE_COMMANDS = {
     "screenshot": "Take screenshots for the previous target"
 }
 
+
 class TargetType(enum.Enum):
     Address = enum.auto()
     Hash = enum.auto()
@@ -88,6 +89,23 @@ class API(enum.Enum):
 
 @dataclass(frozen=True)
 class APIInfo:
+    id: str
     name: str
     key_needed: bool
     target_types: tuple[TargetType]
+
+
+APIS: dict[API, APIInfo] = {
+    API.IPAPI: APIInfo("ip_api", "IP-API", False, (TargetType.Address)),
+    API.Shodan: APIInfo("shodan", "Shodan", True, (TargetType.Address)),
+    API.VirusTotal: APIInfo("vt", "VirusTotal", True, (TargetType.Address, TargetType.Hash)),
+    API.ThreatCrowd: APIInfo("tc", "ThreatCrowd", False, (TargetType.Address, TargetType.Hash)),
+    API.AlienVault: APIInfo("otx", "AlienVault OTX", False, (TargetType.Address, TargetType.Hash))
+}
+
+# APIS but only for those with key_needed
+KEY_APIS: dict[API, APIInfo] = {
+    api: info
+        for api, info in APIS.items()
+        if info.key_needed
+}
