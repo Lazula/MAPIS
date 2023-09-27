@@ -72,7 +72,7 @@ def request_ip_api(target: Target, dry_run: bool = False) -> Response:
         if dry_run:
             response = dummy_response(b'{"isp":"TEST_ISP", "org":"TEST_ORG", "as":12345,"countryCode":"CC", "country":"TEST_COUNTRY", "region":"TEST_REGION", "regionName":"TEST_REGION_NAME", "zip":12345, "timezone":"GMT", "lat":12, "lon":34}')
         else:
-            response = requests.get(f"http://ip-api.com/json/{target.name}")
+            response = requests.get(f"http://ip-api.com/json/{target}")
     else:
         raise UnsupportedTargetTypeError(target.type)
 
@@ -89,7 +89,7 @@ def request_shodan(target: Target, key: str = None, history: bool = False, minif
         else:
             hist = "&history" if history else ""
             mini = "&minify" if minify else ""
-            request_url = f"https://api.shodan.io/shodan/host/{target.name}?key={key}{hist}{mini}"
+            request_url = f"https://api.shodan.io/shodan/host/{target}?key={key}{hist}{mini}"
             response = requests.get(request_url)
     else:
         raise UnsupportedTargetTypeError(target.type)
@@ -106,7 +106,7 @@ def request_virustotal(target: Target, client: vt.Client = None, dry_run: bool =
             response = { "timeout":0, "undetected":0, "harmless":0, "suspicious":0, "malicious":0 }
         else:
             try:
-                url_info = client.get_object("/urls/{}", vt.url_id(target.name))
+                url_info = client.get_object("/urls/{}", vt.url_id(target))
                 response = url_info.last_analysis_stats
             except vt.APIError as e:
                 if e.args[0] == "NotFoundError":
@@ -118,7 +118,7 @@ def request_virustotal(target: Target, client: vt.Client = None, dry_run: bool =
             response = { "timeout":0, "undetected":0, "harmless":0, "suspicious":0, "malicious":0 }
         else:
             try:
-                file_info = client.get_object("/files/{}", target.name)
+                file_info = client.get_object("/files/{}", target)
                 response = file_info.last_analysis_stats
             except vt.APIError as e:
                 if e.args[0] == "NotFoundError":
@@ -136,12 +136,12 @@ def request_threatcrowd(target: Target, dry_run: bool = False) -> Response:
         if dry_run:
             response = dummy_response(b'{"response_code": "1", "votes": "0", "resolutions": [{"last_resolved": "2020-01-01", "domain": "example.com"}, {"last_resolved":"2020-01-01", "domain": "example.org"}], "hashes": ["00000000000000000000000000000000", "11111111111111111111111111111111", "22222222222222222222222222222222", "33333333333333333333333333333333"], "permalink":"http://ci-www.threatcrowd.org/ip.php?ip=127.0.0.1"}')
         else:
-            response = requests.get(f"http://ci-www.threatcrowd.org/searchApi/v2/ip/report/?ip={target.name}")
+            response = requests.get(f"http://ci-www.threatcrowd.org/searchApi/v2/ip/report/?ip={target}")
     elif target.type == TargetType.Hash:
         if dry_run:
             response = dummy_response(b'{"response_code": "1", "votes": "0", "md5":"00000000000000000000000000000000", "sha1":"0000000000000000000000000000000000000000", "scans":["Trojan.Win32", "Trojan","Backdoor:Win32"], "ips":["10.0.0.1", "192.168.0.1", "172.16.0.1"], "domains":["example.com", "example.org"], "references": ["https://example.com", "https://example.org"], "permalink":"http://ci-www.threatcrowd.org/malware.php?md5=00000000000000000000000000000000"}')
         else:
-            response = requests.get(f"http://ci-www.threatcrowd.org/searchApi/v2/file/report/?resource={target.name}")
+            response = requests.get(f"http://ci-www.threatcrowd.org/searchApi/v2/file/report/?resource={target}")
     else:
         raise UnsupportedTargetTypeError(target.type)
 
@@ -154,16 +154,16 @@ def request_alienvault_otx(target: Target, dry_run: bool = False) -> tuple[Respo
             url_list_response = dummy_response(b'{"url_list":[{"domain":"example.com"}, {"domain":"example.org"}]}')
             malware_response  = dummy_response(b'{"count":2, "data":[{"detections":{"avast":"TEST_NAME_1", "avg":"None", "clamav":"TEST_NAME_2", "msdefender":"None"}, "hash":"0000000000000000000000000000000000000000000000000000000000000000"}, {"detections":{"avast":"None", "avg":"None", "clamav":"TEST_NAME_3", "msdefender":"None"}, "hash":"1111111111111111111111111111111111111111111111111111111111111111"}]}')
         else:
-            url_list_response = requests.get(f"https://otx.alienvault.com/api/v1/indicators/IPv4/{target.name}/url_list")
-            malware_response  = requests.get(f"https://otx.alienvault.com/api/v1/indicators/IPv4/{target.name}/malware")
+            url_list_response = requests.get(f"https://otx.alienvault.com/api/v1/indicators/IPv4/{target}/url_list")
+            malware_response  = requests.get(f"https://otx.alienvault.com/api/v1/indicators/IPv4/{target}/malware")
         responses = (url_list_response, malware_response)
     elif target.type == TargetType.Hash:
         if dry_run:
             general_response = dummy_response(b'{"pulse_info": {"count": 2, "pulses": [{"name": "Example name 1", "description": "Example description 1", "tags": ["tag1", "tag2", "tag3"]}, {"name": "Example name 2", "description": "Example description 2", "tags": ["tag4", "tag5"]}], "related": {"other": {"adversary": ["adversary1", "adversary2", "adversary3"], "malware_families": ["malware_family1", "malware_family2", "malware_family3"]}}}}')
             analysis_response  = dummy_response(b'{"analysis": {"info": {"results": {"file_class": "PEXE", "file_type": "PE32 executable (GUI) Intel 80386, for MS Windows", "filesize": 1000000, "md5": "00000000000000000000000000000000", "sha1": "0000000000000000000000000000000000000000", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "ssdeep": "00000:11111111:2222222222:333333333333"}}, "plugins": {"pe32info": {"results": {"imphash": "00000000000000000000000000000000", "packers": null, "pehash": "0000000000000000000000000000000000000000", "richhash": "0000000000000000000000000000000000000000000000000000000000000000"}}, "peanomal": {"results": {"anomalies": 0, "detection": []}}, "yarad": {"results": {"detection": [{"category": ["compression"], "rule_name": "rule1", "severity": 0}, {"rule_name": "rule2", "severity": 0}, {"category": [], "rule_name": "rule3", "severity": 0}, {"category": [], "rule_name": "rule4", "severity": 0}]}}}}}')
         else:
-            general_response  = requests.get(f"https://otx.alienvault.com/api/v1/indicators/file/{target.name}/general")
-            analysis_response = requests.get(f"https://otx.alienvault.com/api/v1/indicators/file/{target.name}/analysis")
+            general_response  = requests.get(f"https://otx.alienvault.com/api/v1/indicators/file/{target}/general")
+            analysis_response = requests.get(f"https://otx.alienvault.com/api/v1/indicators/file/{target}/analysis")
         responses = (general_response, analysis_response)
     else:
         raise UnsupportedTargetTypeError(target.type)

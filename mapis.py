@@ -220,7 +220,7 @@ def main():
 
     for target in targets:
         if target.type is None:
-            print(f'Failed to parse "{target.name}" as IP address, hash, or command.')
+            print(f'Failed to parse "{target}" as IP address, hash, or command.')
             continue
 
         # Process commands
@@ -243,13 +243,13 @@ def main():
                         if driver is None:
                             print("Initializing geckodriver.")
                             driver = mapis_screenshots.create_headless_firefox_driver()
-                        print(f"Taking screenshots for {previous_target.name}.")
-                        target_screenshot_folder = pathjoin(args.screenshot_folder, previous_target.type, previous_target.name)
+                        print(f"Taking screenshots for {previous_target}.")
+                        target_screenshot_folder = pathjoin(args.screenshot_folder, previous_target.type, previous_target)
                         mapis_screenshots.screenshot_target(driver, previous_target, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
                     else:
                         print("The `screenshot` command can only be used if a target has already been provided.")
             else:
-                print(f"Invalid command {target.name} (should have been checked by read_targets_stdin)")
+                print(f"Invalid command {target} (should have been checked by read_targets_stdin)")
 
             print()
             # Following code applies only to lookups
@@ -257,12 +257,12 @@ def main():
 
         previous_target = target
 
-        print(f"{colorama.Style.BRIGHT}Looking up \"{target.name}\"...")
+        print(f"{colorama.Style.BRIGHT}Looking up \"{target}\"...")
         print()
 
         if args.screenshot:
             # Format example: folder/address/1.2.3.4/virustotal.png
-            screenshot_folder = pathjoin(args.screenshot_folder, target.type, target.name)
+            screenshot_folder = pathjoin(args.screenshot_folder, target.type, target)
             mapis_screenshots.screenshot_target(driver,
                 target, screenshot_folder,
                 verbose=args.verbose, overwrite=args.force_screenshot)

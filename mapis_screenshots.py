@@ -65,7 +65,7 @@ def screenshot_shodan(driver: webdriver.Firefox, target: Target, folder: str, ve
         raise UnsupportedTargetTypeError(target.type)
 
     screenshot_path = join(folder, "shodan.png")
-    take_screenshot(driver, f"https://www.shodan.io/host/{target.name}",
+    take_screenshot(driver, f"https://www.shodan.io/host/{target}",
         screenshot_path, 1000, 2000, overwrite=overwrite, verbose=verbose)
 
 
@@ -75,14 +75,14 @@ def screenshot_virustotal(driver: webdriver.Firefox, target: Target, folder: str
 
     if target.type == TargetType.Address:
         take_screenshot(driver,
-            f"https://www.virustotal.com/gui/ip-address/{target.name}/detection",
+            f"https://www.virustotal.com/gui/ip-address/{target}/detection",
             detection_screenshot_path, 1000, 2350, overwrite=overwrite, verbose=verbose)
         take_screenshot(driver,
-            f"https://www.virustotal.com/gui/ip-address/{target.name}/summary",
+            f"https://www.virustotal.com/gui/ip-address/{target}/summary",
             summary_screenshot_path, 500, 750, overwrite=overwrite, verbose=verbose)
     elif target.type == TargetType.Hash:
         take_screenshot(driver,
-            f"https://www.virustotal.com/gui/file/{target.name}/detection",
+            f"https://www.virustotal.com/gui/file/{target}/detection",
             detection_screenshot_path, 1000, 2350, overwrite=overwrite, verbose=verbose)
     else:
         raise UnsupportedTargetTypeError(target.type)
@@ -93,11 +93,11 @@ def screenshot_threatcrowd(driver: webdriver.Firefox, target: Target, folder: st
 
     if target.type == TargetType.Address:
         take_screenshot(driver,
-            f"https://threarcrowd.org/ip.php?ip={target.name}",
+            f"https://threarcrowd.org/ip.php?ip={target}",
             screenshot_path, 1800, 1700, overwrite=overwrite, verbose=verbose)
     elif target.type == TargetType.Hash:
         take_screenshot(driver,
-            f"https://threatcrowd.org/pivot.php?data={target.name}",
+            f"https://threatcrowd.org/pivot.php?data={target}",
             screenshot_path, 1800, 1700, overwrite=overwrite, verbose=verbose)
     else:
         raise UnsupportedTargetTypeError(target.type)
@@ -108,11 +108,11 @@ def screenshot_alienvault_otx(driver: webdriver.Firefox, target: Target, folder:
 
     if target.type == TargetType.Address:
         take_screenshot(driver,
-            f"https://otx.alienvault.com/indicator/ip/{target.name}",
+            f"https://otx.alienvault.com/indicator/ip/{target}",
             screenshot_path, 2000, 3000, overwrite=overwrite, verbose=verbose)
     elif target.type == TargetType.Hash:
         take_screenshot(driver,
-            f"https://otx.alienvault.com/indicator/file/{target.name}",
+            f"https://otx.alienvault.com/indicator/file/{target}",
             screenshot_path, 2000, 3000, overwrite=overwrite, verbose=verbose)
     else:
         raise UnsupportedTargetTypeError(target.type)

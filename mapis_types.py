@@ -62,6 +62,10 @@ class Target:
         return None
 
 
+    def __str__(self) -> str:
+        return self.name
+
+
 class UnsupportedTargetTypeError(ValueError):
     pass
 
