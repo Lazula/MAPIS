@@ -40,7 +40,7 @@ class TestTarget(unittest.TestCase):
 
     def test_target_deduce_type(self):
         for target in self.targets:
-            self.assertEqual(Target.deduce_type(target), target.type)
+            self.assertEqual(Target.deduce_type(target.name), target.type)
 
 
 class TestUnsupportedTargetTypeError(unittest.TestCase):
