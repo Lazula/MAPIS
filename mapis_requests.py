@@ -106,7 +106,7 @@ def request_virustotal(target: Target, client: vt.Client = None, dry_run: bool =
             response = { "timeout":0, "undetected":0, "harmless":0, "suspicious":0, "malicious":0 }
         else:
             try:
-                url_info = client.get_object("/urls/{}", vt.url_id(target))
+                url_info = client.get_object("/urls/{}", vt.url_id(target.name))
                 response = url_info.last_analysis_stats
             except vt.APIError as e:
                 if e.args[0] == "NotFoundError":
