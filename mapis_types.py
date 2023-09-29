@@ -22,7 +22,7 @@
 import enum
 import socket
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 INTERACTIVE_COMMANDS = {
     "help": "Print this help prompt",
@@ -87,7 +87,7 @@ KEY_APIS: dict[API, APIInfo] = {
 class Target:
     name: str
     type: TargetType
-    data: dict[API, dict]
+    data: dict[API, dict] = field(default_factory=dict)
 
     @classmethod
     def deduce_type(self, name: str) -> TargetType:
