@@ -32,6 +32,13 @@ INTERACTIVE_COMMANDS = {
     "screenshot": "Take screenshots for the previous target"
 }
 
+
+class TargetType(enum.Enum):
+    Address = enum.auto()
+    Hash = enum.auto()
+    Command = enum.auto()
+
+
 class API(enum.Enum):
     IPAPI = enum.auto()
     Shodan = enum.auto()
@@ -75,13 +82,6 @@ KEY_APIS: dict[API, APIInfo] = {
         for api, info in APIS.items()
         if info.key_needed
 }
-
-
-class TargetType(enum.Enum):
-    Address = enum.auto()
-    Hash = enum.auto()
-    Command = enum.auto()
-
 
 @dataclass
 class Target:
