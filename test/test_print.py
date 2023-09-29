@@ -884,7 +884,6 @@ class TestPrintTarget(unittest.TestCase):
         with redirect_stdout(StringIO()) as output:
             target_data = {
                 "target": self.target_address,
-                "target_type": "address",
                 "target_api_data": api_data
             }
             print_target_data(target_data)
@@ -924,7 +923,6 @@ class TestPrintTarget(unittest.TestCase):
         with redirect_stdout(StringIO()) as output:
             target_data = {
                 "target": self.target_hash,
-                "target_type": "hash",
                 "target_api_data": api_data
             }
             print_target_data(target_data)

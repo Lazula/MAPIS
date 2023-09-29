@@ -513,7 +513,6 @@ class PrintTargetStrings:
 
 def print_target_data(target_data_dict: dict) -> None:
     target = target_data_dict["target"]
-    target_type = target_data_dict["target_type"]
     target_api_data = target_data_dict["target_api_data"]
 
     print(PrintTargetStrings.ANNOUNCE.format(target=target))
