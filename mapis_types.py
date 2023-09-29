@@ -87,6 +87,7 @@ class TargetType(enum.Enum):
 class Target:
     name: str
     type: TargetType
+    data: dict[API, dict]
 
     @classmethod
     def deduce_type(self, name: str) -> TargetType:
