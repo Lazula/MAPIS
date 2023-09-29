@@ -100,11 +100,11 @@ class APIInfo:
 
 
 APIS: dict[API, APIInfo] = {
-    API.IPAPI: APIInfo("ip_api", "IP-API", False, (TargetType.Address)),
-    API.Shodan: APIInfo("shodan", "Shodan", True, (TargetType.Address)),
-    API.VirusTotal: APIInfo("vt", "VirusTotal", True, (TargetType.Address, TargetType.Hash)),
-    API.ThreatCrowd: APIInfo("tc", "ThreatCrowd", False, (TargetType.Address, TargetType.Hash)),
-    API.AlienVault: APIInfo("otx", "AlienVault OTX", False, (TargetType.Address, TargetType.Hash))
+    API.IPAPI: APIInfo("ip_api", "IP-API", False, (TargetType.Address,)),
+    API.Shodan: APIInfo("shodan", "Shodan", True, (TargetType.Address,)),
+    API.VirusTotal: APIInfo("vt", "VirusTotal", True, (TargetType.Address, TargetType.Hash,)),
+    API.ThreatCrowd: APIInfo("tc", "ThreatCrowd", False, (TargetType.Address, TargetType.Hash,)),
+    API.AlienVault: APIInfo("otx", "AlienVault OTX", False, (TargetType.Address, TargetType.Hash,))
 }
 
 # APIS but only for those with key_needed
