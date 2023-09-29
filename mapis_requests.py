@@ -50,11 +50,12 @@ def make_request(api: API, target: Target, keys: dict[API, str], vt_client: vt.C
         "dry_run": dry_run
     }
 
-    if api in KEY_APIS and keys is not None:
+    # TODO Refactor key needed vs key needed for requests
+    if api in KEY_APIS and api != API.VirusTotal and keys is not None:
         kwargs["key"] = keys.get(api)
 
     if api == API.VirusTotal:
-        kwargs["vt_client"] = vt_client
+        kwargs["client"] = vt_client
 
     if api == API.Shodan:
         kwargs["history"] = False
