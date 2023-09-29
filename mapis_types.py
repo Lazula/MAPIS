@@ -32,44 +32,6 @@ INTERACTIVE_COMMANDS = {
     "screenshot": "Take screenshots for the previous target"
 }
 
-
-class TargetType(enum.Enum):
-    Address = enum.auto()
-    Hash = enum.auto()
-    Command = enum.auto()
-
-
-@dataclass
-class Target:
-    name: str
-    type: TargetType
-
-    @classmethod
-    def deduce_type(self, name: str) -> TargetType:
-        if name in INTERACTIVE_COMMANDS.keys():
-            return TargetType.Command
-
-        try:
-            socket.inet_pton(socket.AF_INET, name)
-            return TargetType.Address
-        except socket.error:
-            pass
-
-        if all(c in "0123456789abcdefABCDEF" for c in name):
-            return TargetType.Hash
-
-        # No matching target type
-        return None
-
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class UnsupportedTargetTypeError(ValueError):
-    pass
-
-
 class API(enum.Enum):
     IPAPI = enum.auto()
     Shodan = enum.auto()
@@ -113,3 +75,40 @@ KEY_APIS: dict[API, APIInfo] = {
         for api, info in APIS.items()
         if info.key_needed
 }
+
+
+class TargetType(enum.Enum):
+    Address = enum.auto()
+    Hash = enum.auto()
+    Command = enum.auto()
+
+
+@dataclass
+class Target:
+    name: str
+    type: TargetType
+
+    @classmethod
+    def deduce_type(self, name: str) -> TargetType:
+        if name in INTERACTIVE_COMMANDS.keys():
+            return TargetType.Command
+
+        try:
+            socket.inet_pton(socket.AF_INET, name)
+            return TargetType.Address
+        except socket.error:
+            pass
+
+        if all(c in "0123456789abcdefABCDEF" for c in name):
+            return TargetType.Hash
+
+        # No matching target type
+        return None
+
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class UnsupportedTargetTypeError(ValueError):
+    pass
