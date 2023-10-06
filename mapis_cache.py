@@ -19,8 +19,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import json
+import os
+import sys
 
 from os.path import join as pathjoin
 from typing import Any
@@ -91,7 +92,7 @@ def get_cache_entry(cache_folder: str, target: Target, api_list: list[str] = Non
     try:
         cache_file_path = pathjoin(cache_folder, f"{target}.cache.json")
         with open(cache_file_path) as cache_file:
-            target_data_dict = json.load(cache_file)
+            target_data_dict = json.load(cache_file, cls=Decoder)
         if verbose:
             print(f"Found cache hit for {target}.")
 
@@ -122,7 +123,7 @@ def put_cache_entry(cache_folder: str, target_data_dict: dict[str, dict], use_qu
     target: Target = target_data_dict["target"]
     cache_file_name = f"{target}.cache.json"
     cache_file_path = pathjoin(cache_folder, cache_file_name)
-    cache_data = json.dumps(target_data_dict)
+    cache_data = json.dumps(target_data_dict, cls=Encoder)
 
     write_to_cache = True
     # TODO: use an enum
