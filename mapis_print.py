@@ -125,7 +125,7 @@ def print_shodan(api_data: dict, target: Target) -> None:
 
 
     for name, key in SHODAN_PARAMS.items():
-        print(format_dict_output(name, api_data[key], ShodanStyle.ENTRY))
+        print(format_dict_output(name, api_data.get(key, "NO RESPONSE"), ShodanStyle.ENTRY))
     print()
 
 
