@@ -59,8 +59,7 @@ class TestHumanReadableSize(unittest.TestCase):
 
 class TestCache(unittest.TestCase):
     sample_data_address = {
-        "target": "127.0.0.1",
-        "target_type": "address",
+        "target": Target("127.0.0.1", TargetType.Address),
         "target_api_data": {
             "api1": {
                 "data1": "val1",
@@ -70,8 +69,7 @@ class TestCache(unittest.TestCase):
     }
 
     sample_data_hash = {
-        "target": "0000",
-        "target_type": "hash",
+        "target": Target("0000", TargetType.Hash),
         "target_api_data": {
             "api3": {
                 "a": 1,
