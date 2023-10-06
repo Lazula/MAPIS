@@ -131,6 +131,7 @@ def print_shodan(api_data: dict, target: Target) -> None:
 
 class VirusTotalStyle:
     ANNOUNCE = colorama.Fore.LIGHTCYAN_EX + colorama.Style.BRIGHT
+    ERROR = colorama.Fore.LIGHTRED_EX + colorama.Style.BRIGHT
     PERMALINK = colorama.Fore.LIGHTCYAN_EX
 
     TIMEOUT = PrintStyle(
@@ -152,6 +153,7 @@ class VirusTotalStyle:
 
 class VirusTotalStrings:
     ANNOUNCE = VirusTotalStyle.ANNOUNCE + "VirusTotal API Response:"
+    ERROR = VirusTotalStyle.ERROR + "Error: {error}"
     PERMALINK_ADDRESS = VirusTotalStyle.PERMALINK + "https://www.virustotal.com/gui/ip-address/{target}/detection"
     PERMALINK_HASH = VirusTotalStyle.PERMALINK + "https://www.virustotal.com/gui/file/{target}/detection"
 
@@ -167,6 +169,15 @@ VIRUSTOTAL_PARAMS = (
 
 def print_virustotal(api_data: dict, target: Target) -> None:
     print(VirusTotalStrings.ANNOUNCE)
+
+    error = api_data.get("error")
+    if error is not None:
+        error = {
+            "NotFoundError": "Not Found",
+            "APIError": "API Error"
+        }[error]
+        print(VirusTotalStrings.ERROR.format(error=error))
+        return
 
     for key, name, style in VIRUSTOTAL_PARAMS:
         print(format_dict_output(name, api_data[key], style))

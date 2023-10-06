@@ -79,8 +79,10 @@ def add_shodan_data(target_api_data: dict[str, Any], response: Response, target:
 def add_virustotal_data(target_api_data: dict[str, Any], response: Response, target: Target) -> None:
     if response == "NotFoundError":
         status_string(False, "virustotal", target, '"Not Found"')
+        target_api_data["vt"] = {"error": "NotFoundError"}
     elif response == "APIError":
         status_string(False, "virustotal", target, '"API Error"')
+        target_api_data["vt"] = {"error": "APIError"}
     else:
         status_string(True, "virustotal", target)
         target_api_data["vt"] = response

@@ -116,11 +116,11 @@ class TestAddAPIData(unittest.TestCase):
 
         response = "NotFoundError"
         add_virustotal_data(target_api_data, response, self.target)
-        self.assertFalse("vt" in target_api_data)
+        self.assertEqual(target_api_data["vt"], {"error": "NotFoundError"})
 
         response = "APIError"
         add_virustotal_data(target_api_data, response, self.target)
-        self.assertFalse("vt" in target_api_data)
+        self.assertEqual(target_api_data["vt"], {"error": "APIError"})
 
 
     def test_add_threatcrowd_data(self):

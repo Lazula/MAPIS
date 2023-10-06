@@ -188,6 +188,10 @@ class TestVirusTotalConstants(unittest.TestCase):
             colorama.Fore.LIGHTCYAN_EX + colorama.Style.BRIGHT
         )
         self.assertEqual(
+            VirusTotalStyle.ERROR,
+            colorama.Fore.LIGHTRED_EX + colorama.Style.BRIGHT
+        )
+        self.assertEqual(
             VirusTotalStyle.PERMALINK,
             colorama.Fore.LIGHTCYAN_EX
         )
@@ -228,6 +232,10 @@ class TestVirusTotalConstants(unittest.TestCase):
         self.assertEqual(
             VirusTotalStrings.ANNOUNCE,
             VirusTotalStyle.ANNOUNCE + "VirusTotal API Response:"
+        )
+        self.assertEqual(
+            VirusTotalStrings.ERROR,
+            VirusTotalStyle.ERROR + "Error: {error}"
         )
         self.assertEqual(
             VirusTotalStrings.PERMALINK_ADDRESS,
@@ -280,6 +288,30 @@ class TestPrintVirusTotal(unittest.TestCase):
             *expected_dict_output,
             VirusTotalStrings.PERMALINK_HASH.format(target=self.target_hash),
             "",
+            ""
+        ))
+        self.assertEqual(output.getvalue(), expected)
+
+
+    def test_print_virustotal_error(self):
+        data = {"error": "NotFoundError"}
+        with redirect_stdout(StringIO()) as output:
+            print_virustotal(data, self.target_address)
+
+        expected = "\n".join((
+            VirusTotalStrings.ANNOUNCE,
+            VirusTotalStrings.ERROR.format(error="Not Found"),
+            ""
+        ))
+        self.assertEqual(output.getvalue(), expected)
+
+        data = {"error": "APIError"}
+        with redirect_stdout(StringIO()) as output:
+            print_virustotal(data, self.target_address)
+
+        expected = "\n".join((
+            VirusTotalStrings.ANNOUNCE,
+            VirusTotalStrings.ERROR.format(error="API Error"),
             ""
         ))
         self.assertEqual(output.getvalue(), expected)
