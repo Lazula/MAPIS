@@ -44,7 +44,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")
     parser.add_argument("-c", "--color", action="store_true", help="Enable color output")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(APIS.keys()), metavar="API[,API...]")
+    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(info.id for info in APIS.values()), metavar="API[,API...]")
     parser.add_argument("-p", "--purge-cache", action="store_true", help="Purge cache (delete all previously cached results.")
 
     target_args = parser.add_mutually_exclusive_group()
@@ -55,9 +55,8 @@ def parse_arguments():
     key_args = parser.add_argument_group(description="Key arguments.")
     key_args.add_argument("--keydir", type=str, help="Directory which stores API key files (name format: <api_name>_key.txt). Other key options will override these files.", default="API_KEYS")
     # Generate key arguments automatically
-    for api, data in KEY_APIS.items():
-        name = data["name"]
-        key_args.add_argument(f"--{api}-key", type=str, help=f"{name} API key (overrides keyfile).")
+    for info in KEY_APIS.values():
+        key_args.add_argument(f"--{info.id}-key", type=str, help=f"{info.id} API key (overrides keyfile).")
 
     # TODO time this
     screenshot_args = parser.add_argument_group(description="Screenshot arguments. Screenshots slow down lookups significantly - it is recommended to only use them after confirmation. Screenshots are not subject to quota limitations at this time.")
@@ -107,10 +106,10 @@ def parse_arguments():
         args.api_list = tuple(APIS.keys())
 
     if not args.keydir:
-        for api_id in KEY_APIS.keys():
-            if api in args.api_list and not vars(args).get(f"{api_id}_key"):
+        for api, info in KEY_APIS.items():
+            if api in args.api_list and not vars(args).get(f"{info.id}_key"):
                 parser.print_help()
-                print(f"\n{api_id} key missing.")
+                print(f"\n{info.id} key missing.")
                 print("You must specify an existing key directory if you have not provided all API keys.")
                 raise RuntimeError
 
@@ -134,19 +133,18 @@ def parse_arguments():
 def read_keys(args) -> dict[API, str]:
     keys = dict()
 
-    for api in KEY_APIS.keys():
+    for api, info in KEY_APIS.items():
         if api not in args.api_list:
             continue
 
-        api_id = APIS[api].id
         # First, check for keys given in arguments
-        arg_key = vars(args).get(f"{api_id}_key")
+        arg_key = vars(args).get(f"{info.id}_key")
         if arg_key:
             keys[api] = arg_key
         # Otherwise, try to read key from file
         elif args.keydir:
             try:
-                keys[api] = open(pathjoin(args.keydir, f"{api_id}_key.txt")).read().strip()
+                keys[api] = open(pathjoin(args.keydir, f"{info.id}_key.txt")).read().strip()
             except OSError:
                 # Skip over nonexistent keys silently
                 # Missing key errors are handled outside this function
@@ -200,8 +198,8 @@ def main():
 
     # Purge cache
     if args.purge_cache:
-        for f in os.listdir(args.cache_folder):
-            os.unlink(f)
+        for de in os.scandir(args.cache_folder):
+            os.unlink(de.path)
 
     # Disable caching if turned off in options or dry run
     cache_responses = not (args.no_cache or args.dry_run)
@@ -211,8 +209,8 @@ def main():
     quota_size = mapis_cache.readable_to_bytes(args.disk_quota_size)
     current_disk_usage = None
 
-    if "vt" in args.api_list:
-        vt_client = vt.Client(keys["vt"])
+    if API.VirusTotal in args.api_list:
+        vt_client = vt.Client(keys[API.VirusTotal])
     else:
         vt_client = None
 
@@ -291,8 +289,7 @@ def main():
             }
 
         # Make requests and record in target data
-        for api, data in APIS.items():
-            types = data["target_types"]
+        for api, info in APIS.items():
             if api not in args.api_list:
                 continue
 
@@ -302,7 +299,7 @@ def main():
                     print(f"{api} data already cached.")
                 continue
 
-            if target.type in types:
+            if target.type in info.target_types:
                 response = mapis_requests.make_request(api, target, keys,
                         vt_client=vt_client, dry_run=args.dry_run)
                 mapis_data.add_api_data(api, target_data_dict["target_api_data"], response, target)
@@ -317,7 +314,7 @@ def main():
         # Print all found data
         mapis_print.print_target_data(target_data_dict)
 
-    if "vt" in args.api_list:
+    if API.VirusTotal in args.api_list:
         vt_client.close()
 
 if __name__ == "__main__":
