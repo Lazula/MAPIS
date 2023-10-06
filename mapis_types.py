@@ -20,7 +20,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import enum
+import json
 import socket
+import sys
 
 from dataclasses import dataclass, field
 
@@ -111,5 +113,46 @@ class Target:
         return self.name
 
 
+    def __to_json__(self):
+        raise NotImplementedError
+
+
+    @staticmethod
+    def __from_json__(o: dict):
+        raise NotImplementedError
+
+
 class UnsupportedTargetTypeError(ValueError):
     pass
+class Encoder(json.JSONEncoder):
+    def default(self, o):
+        try:
+            return o.__to_json__()
+        except TypeError: # __to_json__ is not callable
+            return o.__to_json__
+        except AttributeError: # __to_json__ does not exist
+            return super(Encoder, self).default(o)
+
+
+class Decoder(json.JSONDecoder):
+    def __init__(self):
+        super().__init__(object_hook=self.object_hook)
+
+
+    def object_hook(self, o):
+        # If the object doesn't have a _type flag, return it as a dict
+        try:
+            obj_type = o["_type"]
+        except KeyError:
+            return o
+
+        # Try to convert the typename string to a class from mapis_types
+        try:
+            classtype = getattr(sys.modules["mapis_types"], obj_type)
+        except AttributeError: # does not exist
+            raise TypeError(f"No such _type {obj_type} in mapis_types")
+
+        try:
+            return getattr(sys.modules["mapis_types"], obj_type).__from_json__(o)
+        except AttributeError: # no __from_json__
+            raise TypeError(f"Given _type {obj_type} has no __from_json__() staticmethod")

@@ -65,3 +65,60 @@ class TestUnsupportedTargetTypeError(unittest.TestCase):
             raiser,
             None
         )
+
+
+class TestJSONEncDec(unittest.TestCase):
+    expected_encoded = "\n".join((
+        '{',
+        '   "_type": "Target",',
+        '   "name": "127.0.0.1",',
+        '   "type": "Address",',
+        '   "data": {',
+        '       "API.IPAPI": {'
+        '           "key1": "val1",',
+        '           "key2": "val2"',
+        '       },',
+        '       "API.Shodan": {'
+        '           "key3": "val3",',
+        '           "key4": "val4"',
+        '       }',
+        '   }',
+        '}'
+    ))
+
+    expected_decoded = Target(
+        name = "127.0.0.1",
+        type = TargetType.Address,
+        data = {
+            API.IPAPI: {
+                "key1": "val1",
+                "key2": "val2"
+            },
+            API.Shodan: {
+                "key3": "val3",
+                "key4": "val4"
+            }
+        }
+    )
+
+    def test_encoder(self):
+        encoded = json.dumps(self.expected_decoded, cls=Encoder, indent=4)
+        self.assertEqual(self.expected_encoded, encoded)
+
+
+    def test_decoder(self):
+        decoded = json.loads(self.expected_encoded, cls=Decoder)
+        self.assertIsInstance(decoded, Target)
+        self.assertEqual(self.expected_decoded, decoded)
+
+
+    def test_unsupported_object(self):
+        class NotSupported:
+            pass
+
+        self.assertRaises(
+            TypeError,
+            json.dumps,
+            NotSupported(),
+            cls=Decoder
+        )
