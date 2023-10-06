@@ -46,8 +46,8 @@ class API(enum.Enum):
     ThreatCrowd = enum.auto()
     AlienVault = enum.auto()
 
-    @classmethod
-    def from_id(self, s: str):
+    @staticmethod
+    def from_id(s: str):
         try:
             return {
                 "ip_api": API.IPAPI,
@@ -89,8 +89,8 @@ class Target:
     type: TargetType
     data: dict[API, dict] = field(default_factory=dict)
 
-    @classmethod
-    def deduce_type(self, name: str) -> TargetType:
+    @staticmethod
+    def deduce_type(name: str) -> TargetType:
         if name in INTERACTIVE_COMMANDS.keys():
             return TargetType.Command
 
