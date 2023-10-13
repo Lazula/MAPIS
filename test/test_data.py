@@ -27,7 +27,7 @@ from mapis_requests import dummy_response
 
 class TestPrintStatus(unittest.TestCase):
     api = "test_api"
-    target = "target_name"
+    target: Target = Target("target_name", TargetType.Address)
 
     def test_constants(self):
         self.assertEqual(
@@ -72,8 +72,8 @@ class TestPrintStatus(unittest.TestCase):
 
 
 class TestAddAPIData(unittest.TestCase):
-    target = "127.0.0.1"
-    target_hash = "00000000000000000000000000000000"
+    target: Target = Target("127.0.0.1", TargetType.Address)
+    target_hash: Target = Target("00000000000000000000000000000000", TargetType.Hash)
 
     def test_add_ip_api_data(self):
         target_api_data = dict()
@@ -116,11 +116,11 @@ class TestAddAPIData(unittest.TestCase):
 
         response = "NotFoundError"
         add_virustotal_data(target_api_data, response, self.target)
-        self.assertFalse("vt" in target_api_data)
+        self.assertEqual(target_api_data["vt"], {"error": "NotFoundError"})
 
         response = "APIError"
         add_virustotal_data(target_api_data, response, self.target)
-        self.assertFalse("vt" in target_api_data)
+        self.assertEqual(target_api_data["vt"], {"error": "APIError"})
 
 
     def test_add_threatcrowd_data(self):
@@ -247,26 +247,26 @@ class TestAddAPIData(unittest.TestCase):
 
         ip_api_data = {"key": "value"}
         ip_api_response = dummy_response(json.dumps(ip_api_data).encode())
-        add_api_data("ip_api", target_api_data, ip_api_response, self.target)
+        add_api_data(API.IPAPI, target_api_data, ip_api_response, self.target)
 
         shodan_data = {"key": "value"}
         shodan_response = dummy_response(json.dumps(shodan_data).encode())
-        add_shodan_data(target_api_data, shodan_response, self.target)
+        add_api_data(API.Shodan, target_api_data, shodan_response, self.target)
 
         virustotal_data = { "timeout":0, "undetected":0, "harmless":0, "suspicious":0, "malicious":0 }
         virustotal_response = virustotal_data
-        add_virustotal_data(target_api_data, virustotal_response, self.target)
+        add_api_data(API.VirusTotal, target_api_data, virustotal_response, self.target)
 
         threatcrowd_data = {"key": "value"}
         threatcrowd_response = dummy_response(json.dumps(threatcrowd_data).encode())
-        add_threatcrowd_data(target_api_data, threatcrowd_response, self.target)
+        add_api_data(API.ThreatCrowd, target_api_data, threatcrowd_response, self.target)
 
         url_data = {"key1": "value1"}
         malware_data = {"key2": "value2"}
         url_response = dummy_response(json.dumps(url_data).encode())
         malware_response = dummy_response(json.dumps(malware_data).encode())
         alienvault_otx_responses = (url_response, malware_response)
-        add_alienvault_otx_data(target_api_data, alienvault_otx_responses, self.target)
+        add_api_data(API.AlienVault, target_api_data, alienvault_otx_responses, self.target)
 
         expected_api_data = {
             "ip_api": ip_api_data,
@@ -286,18 +286,18 @@ class TestAddAPIData(unittest.TestCase):
 
         virustotal_data = { "timeout":0, "undetected":0, "harmless":0, "suspicious":0, "malicious":0 }
         virustotal_response = virustotal_data
-        add_virustotal_data(target_api_data, virustotal_response, self.target_hash)
+        add_api_data(API.VirusTotal, target_api_data, virustotal_response, self.target_hash)
 
         threatcrowd_data = {"key": "value"}
         threatcrowd_response = dummy_response(json.dumps(threatcrowd_data).encode())
-        add_threatcrowd_data(target_api_data, threatcrowd_response, self.target_hash)
+        add_api_data(API.ThreatCrowd, target_api_data, threatcrowd_response, self.target_hash)
 
         general_data = {"key1": "value1"}
         analysis_data = {"key2": "value2"}
         general_response = dummy_response(json.dumps(general_data).encode())
         analysis_response = dummy_response(json.dumps(analysis_data).encode())
         alienvault_otx_responses = (general_response, analysis_response)
-        add_alienvault_otx_data(target_api_data, alienvault_otx_responses, self.target_hash)
+        add_api_data(API.AlienVault, target_api_data, alienvault_otx_responses, self.target_hash)
 
         expected_api_data = {
             "vt": virustotal_data,

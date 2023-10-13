@@ -28,18 +28,23 @@ from requests.models import Response
 from mapis_requests import *
 from mapis import read_keys
 
-google_dns_target = "8.8.8.8"
+google_dns = "8.8.8.8"
+google_dns_target = Target(google_dns, Target.deduce_type(google_dns))
 
 # Real threat samples
-aridviper_address_target = "188.40.75.132"
-aridviper_md5_hash_target = "003f0ed24b5f70ddc7c6e80f9c4dac73"
-aridviper_sha1_hash_target = "75ec7d0d1b6b2b4c816cbc1b71cd0f8f06bd8c1b"
+aridviper_address = "188.40.75.132"
+aridviper_md5_hash = "003f0ed24b5f70ddc7c6e80f9c4dac73"
+aridviper_sha1_hash = "75ec7d0d1b6b2b4c816cbc1b71cd0f8f06bd8c1b"
+
+aridviper_address_target = Target(aridviper_address, Target.deduce_type(aridviper_address))
+aridviper_md5_hash_target = Target(aridviper_md5_hash, Target.deduce_type(aridviper_md5_hash))
+aridviper_sha1_hash_target = Target(aridviper_sha1_hash, Target.deduce_type(aridviper_sha1_hash))
 
 
 class TestDummyResponse(unittest.TestCase):
     def test_dummy_response(self):
         resp = dummy_response(b'{"key": "value"}')
-        self.assertIsInstance(resp, requests.models.Response)
+        self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.text, '{"key": "value"}')
         self.assertEqual(resp.json(), {"key": "value"})
@@ -47,32 +52,38 @@ class TestDummyResponse(unittest.TestCase):
 
 class TestMakeRequest(unittest.TestCase):
     def test_make_request_address(self):
-        resp = make_request("ip_api", google_dns_target, "address", None)
+        resp = make_request(API.IPAPI, google_dns_target, None)
         self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
 
 
     def test_make_request_hash(self):
-        resp = make_request("otx", aridviper_md5_hash_target, "hash", None)
+        resp = make_request(API.AlienVault, aridviper_md5_hash_target, None)
         self.assertIsInstance(resp[0], Response)
         self.assertIsInstance(resp[1], Response)
         self.assertEqual(resp[0].status_code, 200)
         self.assertEqual(resp[1].status_code, 200)
 
 
-    def test_make_request_error(self):
-        self.assertRaises(
-            ValueError,
-            make_request,
-            "nonexistent_api", None, None, None
-        )
-
-
 class TestRequestIPAPI(unittest.TestCase):
     def test_request_ip_api(self):
-        resp = request_ip_api(google_dns_target, "address")
+        resp = request_ip_api(google_dns_target)
         self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
+
+
+    def test_request_ip_api_unsupported_type(self):
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            request_ip_api,
+            Target("", TargetType.Hash)
+        )
+
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            request_ip_api,
+            Target("", TargetType.Command)
+        )
 
 
 class TestRequestShodan(unittest.TestCase):
@@ -80,32 +91,46 @@ class TestRequestShodan(unittest.TestCase):
     def setUp(self):
         args = Namespace()
         args.keydir = "API_KEYS"
-        args.api_list = ["shodan"]
-        self.key = read_keys(args)["shodan"]
+        args.api_list = [API.Shodan]
+        self.key = read_keys(args)[API.Shodan]
 
 
     def test_request_shodan_no_history_no_minify(self):
-        resp = request_shodan(google_dns_target, "address", self.key, history=False, minify=False)
+        resp = request_shodan(google_dns_target, self.key, history=False, minify=False)
         self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
 
 
     def test_request_shodan_with_history_no_minify(self):
-        resp = request_shodan(google_dns_target, "address", self.key, history=True, minify=False)
+        resp = request_shodan(google_dns_target, self.key, history=True, minify=False)
         self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
 
 
     def test_request_shodan_no_history_with_minify(self):
-        resp = request_shodan(google_dns_target, "address", self.key, history=False, minify=True)
+        resp = request_shodan(google_dns_target, self.key, history=False, minify=True)
         self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
 
 
     def test_request_shodan_with_history_with_minify(self):
-        resp = request_shodan(google_dns_target, "address", self.key, history=True, minify=True)
+        resp = request_shodan(google_dns_target, self.key, history=True, minify=True)
         self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
+
+
+    def test_request_shodan_unsupported_type(self):
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            request_shodan,
+            Target("", TargetType.Hash), ""
+        )
+
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            request_shodan,
+            Target("", TargetType.Command), ""
+        )
 
 
 class TestRequestVirusTotal(unittest.TestCase):
@@ -113,8 +138,8 @@ class TestRequestVirusTotal(unittest.TestCase):
     def setUp(self):
         args = Namespace()
         args.keydir = "API_KEYS"
-        args.api_list = ["vt"]
-        self.client = vt.Client(read_keys(args)["vt"])
+        args.api_list = [API.VirusTotal]
+        self.client = vt.Client(read_keys(args)[API.VirusTotal])
 
 
     @classmethod
@@ -123,32 +148,40 @@ class TestRequestVirusTotal(unittest.TestCase):
 
 
     def test_request_virustotal_address(self):
-        resp = request_virustotal(self.client, google_dns_target, "address")
+        resp = request_virustotal(google_dns_target, self.client)
         expected = {'harmless': 69, 'malicious': 2, 'suspicious': 0, 'undetected': 19, 'timeout': 0}
         self.assertEqual(resp, expected)
 
 
     def test_request_virustotal_hash(self):
-        resp = request_virustotal(self.client, aridviper_md5_hash_target, "hash")
+        resp = request_virustotal(aridviper_md5_hash_target, self.client)
         expected = {'harmless': 0, 'type-unsupported': 4, 'suspicious': 0, 'confirmed-timeout': 0, 'timeout': 0, 'failure': 0, 'malicious': 55, 'undetected': 16}
         self.assertEqual(resp, expected)
-        resp = request_virustotal(self.client, aridviper_sha1_hash_target, "hash")
+        resp = request_virustotal(aridviper_sha1_hash_target, self.client)
         self.assertEqual(resp, expected)
+
+
+    def test_request_virustotal_unsupported_type(self):
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            request_virustotal,
+            Target("", TargetType.Command), "dummy"
+        )
 
 
 class TestRequestThreatCrowd(unittest.TestCase):
     def test_request_threatcrowd_address(self):
-        resp = request_threatcrowd(google_dns_target, "address")
+        resp = request_threatcrowd(google_dns_target)
         self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
 
-        resp = request_threatcrowd(aridviper_address_target, "address")
+        resp = request_threatcrowd(aridviper_address_target)
         self.assertIsInstance(resp, Response)
         self.assertEqual(resp.status_code, 200)
 
 
     def test_request_threatcrowd_hash(self):
-        resp_md5 = request_threatcrowd(aridviper_md5_hash_target, "hash")
+        resp_md5 = request_threatcrowd(aridviper_md5_hash_target)
         expected = {
             'response_code': '1',
             'md5': '003f0ed24b5f70ddc7c6e80f9c4dac73',
@@ -167,13 +200,21 @@ class TestRequestThreatCrowd(unittest.TestCase):
         }
         self.assertEqual(resp_md5.json(), expected)
 
-        resp_sha1 = request_threatcrowd(aridviper_sha1_hash_target, "hash")
+        resp_sha1 = request_threatcrowd(aridviper_sha1_hash_target)
         self.assertEqual({"response_code": "0"}, resp_sha1.json())
+
+
+    def test_request_threatcrowd_unsupported_type(self):
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            request_threatcrowd,
+            Target("", TargetType.Command)
+        )
 
 
 class TestRequestAlienVaultOTX(unittest.TestCase):
     def test_request_alienvault_otx_address(self):
-        resp = request_alienvault_otx(google_dns_target, "address")
+        resp = request_alienvault_otx(google_dns_target)
         self.assertIsInstance(resp[0], Response)
         self.assertIsInstance(resp[1], Response)
         self.assertEqual(resp[0].status_code, 200)
@@ -181,8 +222,16 @@ class TestRequestAlienVaultOTX(unittest.TestCase):
 
 
     def test_request_alienvault_otx_hash(self):
-        resp = request_alienvault_otx(aridviper_md5_hash_target, "hash")
+        resp = request_alienvault_otx(aridviper_md5_hash_target)
         self.assertIsInstance(resp[0], Response)
         self.assertIsInstance(resp[1], Response)
         self.assertEqual(resp[0].status_code, 200)
         self.assertEqual(resp[1].status_code, 200)
+
+
+    def test_request_alienvault_otx_unsupported_type(self):
+        self.assertRaises(
+            UnsupportedTargetTypeError,
+            request_alienvault_otx,
+            Target("", TargetType.Command)
+        )

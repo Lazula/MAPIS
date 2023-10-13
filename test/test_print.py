@@ -88,11 +88,11 @@ class TestIPAPIConstants(unittest.TestCase):
 
 
 class TestPrintIPAPI(unittest.TestCase):
-    target_address = "127.0.0.1"
+    target_address = Target("127.0.0.1", TargetType.Address)
 
     def test_print_ip_api_address(self):
         data = mapis_requests.request_ip_api(
-            self.target_address, "address", dry_run=True).json()
+            self.target_address, dry_run=True).json()
 
         with redirect_stdout(StringIO()) as output:
             print_ip_api(data)
@@ -143,11 +143,11 @@ class TestShodanConstants(unittest.TestCase):
 
 
 class TestPrintShodan(unittest.TestCase):
-    target_address = "127.0.0.1"
+    target_address = Target("127.0.0.1", TargetType.Address)
 
     def test_print_shodan(self):
         data = mapis_requests.request_shodan(
-            self.target_address, "address", None, dry_run=True).json()
+            self.target_address, None, dry_run=True).json()
 
         with redirect_stdout(StringIO()) as output:
             print_shodan(data, self.target_address)
@@ -186,6 +186,10 @@ class TestVirusTotalConstants(unittest.TestCase):
         self.assertEqual(
             VirusTotalStyle.ANNOUNCE,
             colorama.Fore.LIGHTCYAN_EX + colorama.Style.BRIGHT
+        )
+        self.assertEqual(
+            VirusTotalStyle.ERROR,
+            colorama.Fore.LIGHTRED_EX + colorama.Style.BRIGHT
         )
         self.assertEqual(
             VirusTotalStyle.PERMALINK,
@@ -230,6 +234,10 @@ class TestVirusTotalConstants(unittest.TestCase):
             VirusTotalStyle.ANNOUNCE + "VirusTotal API Response:"
         )
         self.assertEqual(
+            VirusTotalStrings.ERROR,
+            VirusTotalStyle.ERROR + "Error: {error}"
+        )
+        self.assertEqual(
             VirusTotalStrings.PERMALINK_ADDRESS,
             VirusTotalStyle.PERMALINK + "https://www.virustotal.com/gui/ip-address/{target}/detection"
         )
@@ -240,14 +248,14 @@ class TestVirusTotalConstants(unittest.TestCase):
     
 
 class TestPrintVirusTotal(unittest.TestCase):
-    target_address = "127.0.0.1"
-    target_hash = "00000000000000000000000000000000"
+    target_address = Target("127.0.0.1", TargetType.Address)
+    target_hash = Target("00000000000000000000000000000000", TargetType.Hash)
 
     def test_print_virustotal_address(self):
         data = mapis_requests.request_virustotal(
-            None, self.target_address, "address", dry_run=True)
+            self.target_address, client=None, dry_run=True)
         with redirect_stdout(StringIO()) as output:
-            print_virustotal(data, self.target_address, "address")
+            print_virustotal(data, self.target_address)
 
         expected_dict_output = (
             format_dict_output(name, data[key], style)
@@ -266,9 +274,9 @@ class TestPrintVirusTotal(unittest.TestCase):
 
     def test_print_virustotal_hash(self):
         data = mapis_requests.request_virustotal(
-            None, self.target_hash, "hash", dry_run=True)
+            self.target_hash, client=None, dry_run=True)
         with redirect_stdout(StringIO()) as output:
-            print_virustotal(data, self.target_hash, "hash")
+            print_virustotal(data, self.target_hash)
 
         expected_dict_output = (
             format_dict_output(name, data[key], style)
@@ -280,6 +288,30 @@ class TestPrintVirusTotal(unittest.TestCase):
             *expected_dict_output,
             VirusTotalStrings.PERMALINK_HASH.format(target=self.target_hash),
             "",
+            ""
+        ))
+        self.assertEqual(output.getvalue(), expected)
+
+
+    def test_print_virustotal_error(self):
+        data = {"error": "NotFoundError"}
+        with redirect_stdout(StringIO()) as output:
+            print_virustotal(data, self.target_address)
+
+        expected = "\n".join((
+            VirusTotalStrings.ANNOUNCE,
+            VirusTotalStrings.ERROR.format(error="Not Found"),
+            ""
+        ))
+        self.assertEqual(output.getvalue(), expected)
+
+        data = {"error": "APIError"}
+        with redirect_stdout(StringIO()) as output:
+            print_virustotal(data, self.target_address)
+
+        expected = "\n".join((
+            VirusTotalStrings.ANNOUNCE,
+            VirusTotalStrings.ERROR.format(error="API Error"),
             ""
         ))
         self.assertEqual(output.getvalue(), expected)
@@ -383,15 +415,15 @@ class TestThreatCrowdConstants(unittest.TestCase):
 
 
 class TestPrintThreatCrowd(unittest.TestCase):
-    target_address = "127.0.0.1"
-    target_hash = "00000000000000000000000000000000"
+    target_address = Target("127.0.0.1", TargetType.Address)
+    target_hash = Target("00000000000000000000000000000000", TargetType.Hash)
 
     def test_print_threatcrowd_address(self):
         data = mapis_requests.request_threatcrowd(
-            self.target_address, "address", dry_run=True).json()
+            self.target_address, dry_run=True).json()
 
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_address, "address")
+            print_threatcrowd(data, self.target_address)
 
         expected = "\n".join((
             ThreatCrowdStrings.ANNOUNCE,
@@ -412,10 +444,10 @@ class TestPrintThreatCrowd(unittest.TestCase):
 
     def test_print_threatcrowd_hash(self):
         data = mapis_requests.request_threatcrowd(
-            self.target_hash, "hash", dry_run=True).json()
+            self.target_hash, dry_run=True).json()
 
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_hash, "hash")
+            print_threatcrowd(data, self.target_hash)
 
         expected = "\n".join((
             ThreatCrowdStrings.ANNOUNCE,
@@ -448,7 +480,7 @@ class TestPrintThreatCrowd(unittest.TestCase):
         data = {"response_code": "0"}
 
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_address, "address")
+            print_threatcrowd(data, self.target_address)
 
         expected = "\n".join((
             ThreatCrowdStrings.ANNOUNCE,
@@ -463,7 +495,7 @@ class TestPrintThreatCrowd(unittest.TestCase):
         data = {"response_code": "0"}
 
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_hash, "hash")
+            print_threatcrowd(data, self.target_hash)
 
         expected = "\n".join((
             ThreatCrowdStrings.ANNOUNCE,
@@ -483,7 +515,7 @@ class TestPrintThreatCrowd(unittest.TestCase):
         }
 
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_address, "address")
+            print_threatcrowd(data, self.target_address)
 
         expected = "\n".join((
             ThreatCrowdStrings.ANNOUNCE,
@@ -502,14 +534,14 @@ class TestPrintThreatCrowd(unittest.TestCase):
 
     def test_print_threatcrowd_hash_empty(self):
         data = mapis_requests.request_threatcrowd(
-            self.target_hash, "hash", dry_run=True).json()
+            self.target_hash, dry_run=True).json()
         data["scans"] = list()
         data["domains"] = list()
         data["ips"] = list()
         data["references"] = list()
 
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_hash, "hash")
+            print_threatcrowd(data, self.target_hash)
 
         expected = "\n".join((
             ThreatCrowdStrings.ANNOUNCE,
@@ -536,10 +568,10 @@ class TestPrintThreatCrowd(unittest.TestCase):
 
     def test_print_threatcrowd_maybe_malicious(self):
         data = mapis_requests.request_threatcrowd(
-            self.target_hash, "hash", dry_run=True).json()
+            self.target_hash, dry_run=True).json()
         data["votes"] = "0"
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_hash, "hash")
+            print_threatcrowd(data, self.target_hash)
         vote_output = output.getvalue().splitlines()[1]
         expected = ThreatCrowdStrings.MaliciousVote.MAYBE.format(target=self.target_hash)
         self.assertEqual(vote_output, expected)
@@ -547,10 +579,10 @@ class TestPrintThreatCrowd(unittest.TestCase):
 
     def test_print_threatcrowd_malicious(self):
         data = mapis_requests.request_threatcrowd(
-            self.target_hash, "hash", dry_run=True).json()
+            self.target_hash, dry_run=True).json()
         data["votes"] = "-1"
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_hash, "hash")
+            print_threatcrowd(data, self.target_hash)
         vote_output = output.getvalue().splitlines()[1]
         expected = ThreatCrowdStrings.MaliciousVote.YES.format(target=self.target_hash)
         self.assertEqual(vote_output, expected)
@@ -558,10 +590,10 @@ class TestPrintThreatCrowd(unittest.TestCase):
 
     def test_print_threatcrowd_not_malicious(self):
         data = mapis_requests.request_threatcrowd(
-            self.target_hash, "hash", dry_run=True).json()
+            self.target_hash,dry_run=True).json()
         data["votes"] = "1"
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_hash, "hash")
+            print_threatcrowd(data, self.target_hash)
         vote_output = output.getvalue().splitlines()[1]
         expected = ThreatCrowdStrings.MaliciousVote.NO.format(target=self.target_hash)
         self.assertEqual(vote_output, expected)
@@ -569,10 +601,10 @@ class TestPrintThreatCrowd(unittest.TestCase):
 
     def test_print_threatcrowd_malicious_unavailable(self):
         data = mapis_requests.request_threatcrowd(
-            self.target_hash, "hash", dry_run=True).json()
+            self.target_hash, dry_run=True).json()
         data["votes"] = "invalid"
         with redirect_stdout(StringIO()) as output:
-            print_threatcrowd(data, self.target_hash, "hash")
+            print_threatcrowd(data, self.target_hash)
         vote_output = output.getvalue().splitlines()[1]
         expected = ThreatCrowdStrings.MaliciousVote.UNAVAILABLE.format(given=data["votes"])
         self.assertEqual(vote_output, expected)
@@ -659,15 +691,15 @@ class TestAlientVaultOTXConstants(unittest.TestCase):
 
 
 class TestAlienVaultOTX(unittest.TestCase):
-    target_address = "127.0.0.1"
-    target_hash = "00000000000000000000000000000000"
+    target_address = Target("127.0.0.1", TargetType.Address)
+    target_hash = Target("00000000000000000000000000000000", TargetType.Hash)
 
     def test_print_alienvault_otx_address(self):
         data_tuple = mapis_requests.request_alienvault_otx(
-            self.target_address, "address", dry_run=True)
+            self.target_address, dry_run=True)
         data = {"url": data_tuple[0].json(), "malware": data_tuple[1].json()}
         with redirect_stdout(StringIO()) as output:
-            print_alienvault_otx(data, self.target_address, "address")
+            print_alienvault_otx(data, self.target_address)
         expected = "\n".join((
             AlienVaultOTXStrings.ANNOUNCE,
             AlienVaultOTXStrings.DOMAIN_ANNOUNCE.format(target=self.target_address),
@@ -687,10 +719,10 @@ class TestAlienVaultOTX(unittest.TestCase):
 
     def test_print_alienvault_otx_hash(self):
         data_tuple = mapis_requests.request_alienvault_otx(
-            self.target_hash, "hash", dry_run=True)
+            self.target_hash, dry_run=True)
         data = {"general": data_tuple[0].json(), "analysis": data_tuple[1].json()}
         with redirect_stdout(StringIO()) as output:
-            print_alienvault_otx(data, self.target_hash, "hash")
+            print_alienvault_otx(data, self.target_hash,)
 
         general_data = data["general"]
         pulse_data = general_data["pulse_info"]
@@ -769,7 +801,7 @@ class TestAlienVaultOTX(unittest.TestCase):
     def test_print_alienvault_otx_address_empty(self):
         data = {"url": {}, "malware": {}}
         with redirect_stdout(StringIO()) as output:
-            print_alienvault_otx(data, self.target_address, "address")
+            print_alienvault_otx(data, self.target_address)
         expected = "\n".join((
             AlienVaultOTXStrings.ANNOUNCE,
             AlienVaultOTXStrings.DOMAIN_EMPTY.format(target=self.target_address),
@@ -786,7 +818,7 @@ class TestAlienVaultOTX(unittest.TestCase):
     def test_print_alienvault_otx_hash_empty(self):
         data = {"general": {}, "analysis": {}}
         with redirect_stdout(StringIO()) as output:
-            print_alienvault_otx(data, self.target_hash, "hash")
+            print_alienvault_otx(data, self.target_hash)
         general_output = {
             "Pulse count": "0",
             "Pulse names": "No names found",
@@ -865,26 +897,25 @@ class TestPrintTargetConstants(unittest.TestCase):
 
 
 class TestPrintTarget(unittest.TestCase):
-    target_address = "127.0.0.1"
-    target_hash = "00000000000000000000000000000000"
+    target_address = Target("127.0.0.1", TargetType.Address)
+    target_hash = Target("00000000000000000000000000000000", TargetType.Hash)
 
     def test_print_target_address(self):
         api_data = dict()
-        add_api_data("ip_api", api_data, mapis_requests.request_ip_api(
-                self.target_address, "address", dry_run=True), self.target_address)
-        add_api_data("shodan", api_data, mapis_requests.request_shodan(
-                self.target_address, "address", key=None, dry_run=True), self.target_address)
-        add_api_data("vt", api_data, mapis_requests.request_virustotal(
-                None, self.target_address, "address", dry_run=True), self.target_address)
-        add_api_data("tc", api_data, mapis_requests.request_threatcrowd(
-                self.target_address, "address", dry_run=True), self.target_address)
-        add_api_data("otx", api_data, mapis_requests.request_alienvault_otx(
-                self.target_address, "address", dry_run=True), self.target_address)
+        add_api_data(API.IPAPI, api_data, mapis_requests.request_ip_api(
+                self.target_address, dry_run=True), self.target_address)
+        add_api_data(API.Shodan, api_data, mapis_requests.request_shodan(
+                self.target_address, key=None, dry_run=True), self.target_address)
+        add_api_data(API.VirusTotal, api_data, mapis_requests.request_virustotal(
+                self.target_address, client=None, dry_run=True), self.target_address)
+        add_api_data(API.ThreatCrowd, api_data, mapis_requests.request_threatcrowd(
+                self.target_address, dry_run=True), self.target_address)
+        add_api_data(API.AlienVault, api_data, mapis_requests.request_alienvault_otx(
+                self.target_address, dry_run=True), self.target_address)
 
         with redirect_stdout(StringIO()) as output:
             target_data = {
                 "target": self.target_address,
-                "target_type": "address",
                 "target_api_data": api_data
             }
             print_target_data(target_data)
@@ -894,11 +925,11 @@ class TestPrintTarget(unittest.TestCase):
         with redirect_stdout(StringIO()) as shodan_output:
             print_shodan(api_data["shodan"], self.target_address)
         with redirect_stdout(StringIO()) as vt_output:
-            print_virustotal(api_data["vt"], self.target_address, "address")
+            print_virustotal(api_data["vt"], self.target_address)
         with redirect_stdout(StringIO()) as tc_output:
-            print_threatcrowd(api_data["tc"], self.target_address, "address")
+            print_threatcrowd(api_data["tc"], self.target_address)
         with redirect_stdout(StringIO()) as otx_output:
-            print_alienvault_otx(api_data["otx"], self.target_address, "address")
+            print_alienvault_otx(api_data["otx"], self.target_address)
 
         expected = "".join((
             PrintTargetStrings.ANNOUNCE.format(target=self.target_address) + "\n\n",
@@ -914,27 +945,26 @@ class TestPrintTarget(unittest.TestCase):
 
     def test_print_target_hash(self):
         api_data = dict()
-        add_api_data("vt", api_data, mapis_requests.request_virustotal(
-            None, self.target_hash, "hash", dry_run=True), self.target_hash)
-        add_api_data("tc", api_data, mapis_requests.request_threatcrowd(
-            self.target_hash, "hash", dry_run=True), self.target_hash)
-        add_api_data("otx", api_data, mapis_requests.request_alienvault_otx(
-            self.target_hash, "hash", dry_run=True), self.target_hash)
+        add_api_data(API.VirusTotal, api_data, mapis_requests.request_virustotal(
+            self.target_hash, client=None, dry_run=True), self.target_hash)
+        add_api_data(API.ThreatCrowd, api_data, mapis_requests.request_threatcrowd(
+            self.target_hash, dry_run=True), self.target_hash)
+        add_api_data(API.AlienVault, api_data, mapis_requests.request_alienvault_otx(
+            self.target_hash, dry_run=True), self.target_hash)
 
         with redirect_stdout(StringIO()) as output:
             target_data = {
                 "target": self.target_hash,
-                "target_type": "hash",
                 "target_api_data": api_data
             }
             print_target_data(target_data)
         
         with redirect_stdout(StringIO()) as vt_output:
-            print_virustotal(api_data["vt"], self.target_hash, "hash")
+            print_virustotal(api_data["vt"], self.target_hash)
         with redirect_stdout(StringIO()) as tc_output:
-            print_threatcrowd(api_data["tc"], self.target_hash, "hash")
+            print_threatcrowd(api_data["tc"], self.target_hash)
         with redirect_stdout(StringIO()) as otx_output:
-            print_alienvault_otx(api_data["otx"], self.target_hash, "hash")
+            print_alienvault_otx(api_data["otx"], self.target_hash)
 
         expected = "".join((
             PrintTargetStrings.ANNOUNCE.format(target=self.target_hash) + "\n\n",

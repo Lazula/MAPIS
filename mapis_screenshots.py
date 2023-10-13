@@ -20,14 +20,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import time
 
 from os.path import join
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 
+from mapis_types import *
 
-def create_headless_firefox_driver():
+def create_headless_firefox_driver() -> webdriver.Firefox:
     options = Options()
     options.add_argument("--headless")
 
@@ -35,115 +35,84 @@ def create_headless_firefox_driver():
     return driver
 
 
-def screenshot_target(driver, target, target_type, folder, verbose=False, overwrite=False):
+def screenshot_target(driver: webdriver.Firefox, target: Target, folder: str, verbose: bool = False, overwrite: bool = False) -> None:
     os.makedirs(folder, exist_ok=True)
 
-    if target_type == "address":
-        screenshot_shodan(driver, target, target_type, folder, verbose=verbose, overwrite=overwrite)
-    elif target_type == "hash":
+    if target.type == TargetType.Address:
+        screenshot_shodan(driver, target, folder, verbose=verbose, overwrite=overwrite)
+    elif target.type == TargetType.Hash:
         pass
     else:
-        raise ValueError(f"Unsupported target type {target_type}")
+        raise UnsupportedTargetTypeError(target.type)
 
-    screenshot_virustotal(driver, target, target_type, folder, verbose=verbose, overwrite=overwrite)
-    screenshot_threatcrowd(driver, target, target_type, folder, verbose=verbose, overwrite=overwrite)
-    screenshot_alienvault_otx(driver, target, target_type, folder, verbose=verbose, overwrite=overwrite)
-
-
-def screenshot_shodan(driver, target, target_type, folder, verbose=False, overwrite=False):
-    if target_type == "address":
-        screenshot_path = join(folder, "shodan.png")
-        exists = os.path.exists(screenshot_path)
-        if (not exists) or (exists and overwrite):
-            driver.set_window_size(1000, 2000)
-            driver.get(f"https://www.shodan.io/host/{target}")
-            driver.save_screenshot(screenshot_path)
-        elif verbose:
-            print(f"{screenshot_path} exists and overwrite is disabled. Skipping screenshot.")
-    else:
-        raise ValueError(f"Unsupported target type {target_type}")
+    screenshot_virustotal(driver, target, folder, verbose=verbose, overwrite=overwrite)
+    screenshot_threatcrowd(driver, target, folder, verbose=verbose, overwrite=overwrite)
+    screenshot_alienvault_otx(driver, target, folder, verbose=verbose, overwrite=overwrite)
 
 
-def screenshot_virustotal(driver, target, target_type, folder, verbose=False, overwrite=False):
+def take_screenshot(driver: webdriver.Firefox, url: str, path: str, width: int, height: int, overwrite: bool, verbose: bool) -> None:
+    exists = os.path.exists(path)
+    if (not exists) or (exists and overwrite):
+        driver.set_window_size(width, height)
+        driver.get(url)
+        driver.save_screenshot(path)
+    elif verbose:
+        print(f"{path} exists and overwrite is disabled. Skipping screenshot.")
+
+
+def screenshot_shodan(driver: webdriver.Firefox, target: Target, folder: str, verbose: bool = False, overwrite: bool = False) -> None:
+    if target.type != TargetType.Address:
+        raise UnsupportedTargetTypeError(target.type)
+
+    screenshot_path = join(folder, "shodan.png")
+    take_screenshot(driver, f"https://www.shodan.io/host/{target}",
+        screenshot_path, 1000, 2000, overwrite=overwrite, verbose=verbose)
+
+
+def screenshot_virustotal(driver: webdriver.Firefox, target: Target, folder: str, verbose: bool = False, overwrite: bool = False) -> None:
     detection_screenshot_path = join(folder, "virustotal_detection.png")
     summary_screenshot_path = join(folder, "virustotal_summary.png")
 
-    if target_type == "address":
-        exists = os.path.exists(detection_screenshot_path)
-        if (not exists) or (exists and overwrite):
-            driver.set_window_size(1000, 2350)
-            driver.get(f"https://www.virustotal.com/gui/ip-address/{target}/detection")
-            time.sleep(1)
-            driver.save_screenshot(detection_screenshot_path)
-        elif verbose:
-            print(f"{detection_screenshot_path} exists and overwrite is disabled. Skipping screenshot.")
-
-        exists = os.path.exists(summary_screenshot_path)
-        if (not exists) or (exists and overwrite):
-            driver.set_window_size(500, 750)
-            driver.get(f"http://www.virustotal.com/gui/ip-address/{target}/summary")
-            time.sleep(1)
-            driver.save_screenshot(summary_screenshot_path)
-        elif verbose:
-            print(f"{summary_screenshot_path} exists and overwrite is disabled. Skipping screenshot.")
-    elif target_type == "hash":
-        exists = os.path.exists(detection_screenshot_path)
-        if (not exists) or (exists and overwrite):
-            driver.set_window_size(1000, 2350)
-            driver.get(f"http://www.virustotal.com/gui/file/{target}/detection")
-            time.sleep(1)
-            driver.save_screenshot(detection_screenshot_path)
-        elif verbose:
-            print(f"{detection_screenshot_path} exists and overwrite is disabled. Skipping screenshot.")
+    if target.type == TargetType.Address:
+        take_screenshot(driver,
+            f"https://www.virustotal.com/gui/ip-address/{target}/detection",
+            detection_screenshot_path, 1000, 2350, overwrite=overwrite, verbose=verbose)
+        take_screenshot(driver,
+            f"https://www.virustotal.com/gui/ip-address/{target}/summary",
+            summary_screenshot_path, 500, 750, overwrite=overwrite, verbose=verbose)
+    elif target.type == TargetType.Hash:
+        take_screenshot(driver,
+            f"https://www.virustotal.com/gui/file/{target}/detection",
+            detection_screenshot_path, 1000, 2350, overwrite=overwrite, verbose=verbose)
     else:
-        raise ValueError(f"Unsupported target type {target_type}")
+        raise UnsupportedTargetTypeError(target.type)
 
 
-def screenshot_threatcrowd(driver, target, target_type, folder, verbose=False, overwrite=False):
+def screenshot_threatcrowd(driver: webdriver.Firefox, target: Target, folder: str, verbose: bool = False, overwrite: bool = False) -> None:
     screenshot_path = join(folder, "threatcrowd.png")
 
-    if target_type == "address":
-        exists = os.path.exists(screenshot_path)
-        if (not exists) or (exists and overwrite):
-            driver.set_window_size(1800, 1700)
-            driver.get(f"https://threatcrowd.org/ip.php?ip={target}")
-            time.sleep(1)
-            driver.save_screenshot(screenshot_path)
-        elif verbose:
-            print(f"{screenshot_path} exists and overwrite is disabled. Skipping screenshot.")
-    elif target_type == "hash":
-        exists = os.path.exists(screenshot_path)
-        if (not exists) or (exists and overwrite):
-            driver.set_window_size(1800, 1700)
-            driver.get(f"https://threatcrowd.org/pivot.php?data={target}")
-            time.sleep(1)
-            driver.save_screenshot(screenshot_path)
-        elif verbose:
-            print(f"{screenshot_path} exists and overwrite is disabled. Skipping screenshot.")
+    if target.type == TargetType.Address:
+        take_screenshot(driver,
+            f"https://threarcrowd.org/ip.php?ip={target}",
+            screenshot_path, 1800, 1700, overwrite=overwrite, verbose=verbose)
+    elif target.type == TargetType.Hash:
+        take_screenshot(driver,
+            f"https://threatcrowd.org/pivot.php?data={target}",
+            screenshot_path, 1800, 1700, overwrite=overwrite, verbose=verbose)
     else:
-        raise ValueError(f"Unsupported target type {target_type}")
+        raise UnsupportedTargetTypeError(target.type)
 
 
-def screenshot_alienvault_otx(driver, target, target_type, folder, verbose=False, overwrite=False):
+def screenshot_alienvault_otx(driver: webdriver.Firefox, target: Target, folder: str, verbose: bool = False, overwrite: bool = False) -> None:
     screenshot_path = join(folder, "alienvault_otx.png")
 
-    if target_type == "address":
-        exists = os.path.exists(screenshot_path)
-        if (not exists) or (exists and overwrite):
-            driver.set_window_size(2000, 3000)
-            driver.get(f"https://otx.alienvault.com/indicator/ip/{target}")
-            time.sleep(3)
-            driver.save_screenshot(screenshot_path)
-        elif verbose:
-            print(f"{screenshot_path} exists and overwrite is disabled. Skipping screenshot.")
-    elif target_type == "hash":
-        exists = os.path.exists(screenshot_path)
-        if (not exists) or (exists and overwrite):
-            driver.set_window_size(2000, 3000)
-            driver.get(f"https://otx.alienvault.com/indicator/file/{target}")
-            time.sleep(3)
-            driver.save_screenshot(screenshot_path)
-        elif verbose:
-            print(f"{screenshot_path} exists and overwrite is disabled. Skipping screenshot.")
+    if target.type == TargetType.Address:
+        take_screenshot(driver,
+            f"https://otx.alienvault.com/indicator/ip/{target}",
+            screenshot_path, 2000, 3000, overwrite=overwrite, verbose=verbose)
+    elif target.type == TargetType.Hash:
+        take_screenshot(driver,
+            f"https://otx.alienvault.com/indicator/file/{target}",
+            screenshot_path, 2000, 3000, overwrite=overwrite, verbose=verbose)
     else:
-        raise ValueError(f"Unsupported target type {target_type}")
+        raise UnsupportedTargetTypeError(target.type)

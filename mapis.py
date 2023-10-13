@@ -38,12 +38,13 @@ import mapis_cache
 import mapis_license_notices
 
 from mapis_requests import APIS, KEY_APIS
+from mapis_types import *
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")
     parser.add_argument("-c", "--color", action="store_true", help="Enable color output")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(APIS.keys()), metavar="API[,API...]")
+    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(repr(api) for api in APIS), metavar="API[,API...]")
     parser.add_argument("-p", "--purge-cache", action="store_true", help="Purge cache (delete all previously cached results.")
 
     target_args = parser.add_mutually_exclusive_group()
@@ -54,9 +55,8 @@ def parse_arguments():
     key_args = parser.add_argument_group(description="Key arguments.")
     key_args.add_argument("--keydir", type=str, help="Directory which stores API key files (name format: <api_name>_key.txt). Other key options will override these files.", default="API_KEYS")
     # Generate key arguments automatically
-    for api, data in KEY_APIS.items():
-        name = data["name"]
-        key_args.add_argument(f"--{api}-key", type=str, help=f"{name} API key (overrides keyfile).")
+    for api in KEY_APIS:
+        key_args.add_argument(f"--{repr(api)}-key", type=str, help=f"{api} API key (overrides keyfile).")
 
     # TODO time this
     screenshot_args = parser.add_argument_group(description="Screenshot arguments. Screenshots slow down lookups significantly - it is recommended to only use them after confirmation. Screenshots are not subject to quota limitations at this time.")
@@ -88,29 +88,31 @@ def parse_arguments():
     if not args.color:
         mapis_print.disable_color()
 
+    # FIXME: give a real error
     if not os.path.isdir(args.keydir):
         args.keydir = None
 
     if args.api_list:
-        args.api_list = args.api_list.split(",")
-
-        # Only need to check if list was explicitly provided
-        for api in args.api_list:
-            if api not in APIS.keys():
-                parser.print_help()
-                print(f"\nInvalid API {api} provided in -a/--api-list.")
-                raise RuntimeError
+        try:
+            args.api_list = (
+                API.from_id(_id)
+                for _id in args.api_list.split(",")
+            )
+        except ValueError as ve:
+            parser.print_help()
+            print(f"\nInvalid API {ve.args[0]} provided in -a/--api-list.")
+            raise RuntimeError
     else:
-        args.api_list = list(APIS.keys())
+        args.api_list = tuple(APIS)
 
     if not args.keydir:
-        for api, data in KEY_APIS.items():
-            name = data["name"]
-            if api in args.api_list and not vars(args).get(f"{api}_key"):
+        for api in KEY_APIS:
+            if api in args.api_list and not vars(args).get(f"{repr(api)}_key"):
                 parser.print_help()
-                print(f"\n{name} key missing.")
+                print(f"\n{repr(api)} key missing.")
                 print("You must specify an existing key directory if you have not provided all API keys.")
                 raise RuntimeError
+
     if not (args.stdin or args.target_list or args.target_file):
         parser.print_help()
         print("\nNo targets specified.")
@@ -128,21 +130,21 @@ def parse_arguments():
     return args
 
 
-def read_keys(args):
+def read_keys(args) -> dict[API, str]:
     keys = dict()
 
-    for api in KEY_APIS.keys():
+    for api in KEY_APIS:
         if api not in args.api_list:
             continue
 
         # First, check for keys given in arguments
-        arg_key = vars(args).get(f"{api}_key")
+        arg_key = vars(args).get(f"{repr(api)}_key")
         if arg_key:
             keys[api] = arg_key
         # Otherwise, try to read key from file
         elif args.keydir:
             try:
-                keys[api] = open(pathjoin(args.keydir, f"{api}_key.txt")).read().strip()
+                keys[api] = open(pathjoin(args.keydir, f"{repr(api)}_key.txt")).read().strip()
             except OSError:
                 # Skip over nonexistent keys silently
                 # Missing key errors are handled outside this function
@@ -160,6 +162,8 @@ def main():
         print("Error encountered during argument parsing.")
         return 1
 
+    targets = None
+
     # Only one input method is allowed at once, so only one of these will run.
     if args.stdin:
         targets = mapis_io.read_targets_stdin()
@@ -170,13 +174,16 @@ def main():
     if args.target_file:
         targets = mapis_io.read_targets_file(args.target_file)
 
+    if targets is None:
+        raise RuntimeError
+
     keys = read_keys(args)
 
     # This is NOT redundant with the argument checker.
     # Only this check accounts for missing key files.
-    for api in KEY_APIS.keys():
+    for api in KEY_APIS:
         if api in args.api_list and api not in keys:
-            print(f"No {api} key. Provide it with --{api}-key or in the key directory as {api}_key.txt")
+            print(f"No {repr(api)} key. Provide it with --{repr(api)}-key or in the key directory as {repr(api)}_key.txt")
             return 1
 
     geckodriver_path = shutil.which("geckodriver") or shutil.which("geckodriver.exe")
@@ -191,8 +198,8 @@ def main():
 
     # Purge cache
     if args.purge_cache:
-        for f in os.listdir(args.cache_folder):
-            os.unlink(f)
+        for de in os.scandir(args.cache_folder):
+            os.unlink(de.path)
 
     # Disable caching if turned off in options or dry run
     cache_responses = not (args.no_cache or args.dry_run)
@@ -202,22 +209,21 @@ def main():
     quota_size = mapis_cache.readable_to_bytes(args.disk_quota_size)
     current_disk_usage = None
 
-    if "vt" in args.api_list:
-        vt_client = vt.Client(keys["vt"])
+    if API.VirusTotal in args.api_list:
+        vt_client = vt.Client(keys[API.VirusTotal])
     else:
         vt_client = None
 
-    previous_target = None
-    previous_target_type = None
+    previous_target: Target = None
 
-    for (target, target_type) in targets:
-        if not target_type:
+    for target in targets:
+        if target.type is None:
             print(f'Failed to parse "{target}" as IP address, hash, or command.')
             continue
 
         # Process commands
-        if target_type == "command":
-            target = target.lower()
+        if target.type == TargetType.Command:
+            target.name = target.name.lower()
             if target == "help":
                 for command, help_text in mapis_io.INTERACTIVE_COMMANDS.items():
                     print(command, ": ", help_text, sep="")
@@ -236,8 +242,8 @@ def main():
                             print("Initializing geckodriver.")
                             driver = mapis_screenshots.create_headless_firefox_driver()
                         print(f"Taking screenshots for {previous_target}.")
-                        target_screenshot_folder = pathjoin(args.screenshot_folder, previous_target_type, previous_target)
-                        mapis_screenshots.screenshot_target(driver, previous_target, previous_target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
+                        target_screenshot_folder = pathjoin(args.screenshot_folder, previous_target.type, previous_target)
+                        mapis_screenshots.screenshot_target(driver, previous_target, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
                     else:
                         print("The `screenshot` command can only be used if a target has already been provided.")
             else:
@@ -247,15 +253,17 @@ def main():
             # Following code applies only to lookups
             continue
 
-        previous_target, previous_target_type = target, target_type
+        previous_target = target
 
         print(f"{colorama.Style.BRIGHT}Looking up \"{target}\"...")
         print()
 
         if args.screenshot:
             # Format example: folder/address/1.2.3.4/virustotal.png
-            target_screenshot_folder = pathjoin(args.screenshot_folder, target_type, target)
-            mapis_screenshots.screenshot_target(driver, target, target_type, target_screenshot_folder, verbose=args.verbose, overwrite=args.force_screenshot)
+            screenshot_folder = pathjoin(args.screenshot_folder, target.type, target)
+            mapis_screenshots.screenshot_target(driver,
+                target, screenshot_folder,
+                verbose=args.verbose, overwrite=args.force_screenshot)
 
         print()
 
@@ -277,13 +285,11 @@ def main():
         if not cache_hit:
             target_data_dict = {
                 "target": target,
-                "target_type": target_type,
                 "target_api_data": dict()
             }
 
         # Make requests and record in target data
-        for api, data in APIS.items():
-            types = data["target_types"]
+        for api, info in APIS.items():
             if api not in args.api_list:
                 continue
 
@@ -293,8 +299,8 @@ def main():
                     print(f"{api} data already cached.")
                 continue
 
-            if target_type in types:
-                response = mapis_requests.make_request(api, target, target_type, keys,
+            if target.type in info.target_types:
+                response = mapis_requests.make_request(api, target, keys,
                         vt_client=vt_client, dry_run=args.dry_run)
                 mapis_data.add_api_data(api, target_data_dict["target_api_data"], response, target)
 
@@ -308,7 +314,7 @@ def main():
         # Print all found data
         mapis_print.print_target_data(target_data_dict)
 
-    if "vt" in args.api_list:
+    if API.VirusTotal in args.api_list:
         vt_client.close()
 
 if __name__ == "__main__":

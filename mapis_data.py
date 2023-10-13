@@ -21,7 +21,10 @@
 
 import colorama
 
-from mapis_io import get_target_type
+from requests.models import Response
+from typing import Any
+
+from mapis_types import *
 
 class Style:
     SUCCESS = colorama.Style.BRIGHT + colorama.Fore.GREEN
@@ -45,24 +48,19 @@ def status_string(success: bool, api: str, target: str, status_code: int | str =
             return Strings.FAIL.format(**kwargs)
 
 
-def add_api_data(api_name, target_api_data, response, target):
+def add_api_data(api: API, target_api_data: dict[str, Any], response: Response | tuple[Response, Response], target: Target) -> None:
     data_func_map = {
-        "ip_api": add_ip_api_data,
-        "shodan": add_shodan_data,
-        "vt":     add_virustotal_data,
-        "tc":     add_threatcrowd_data,
-        "otx":    add_alienvault_otx_data,
+        API.IPAPI:       add_ip_api_data,
+        API.Shodan:      add_shodan_data,
+        API.VirusTotal:  add_virustotal_data,
+        API.ThreatCrowd: add_threatcrowd_data,
+        API.AlienVault:  add_alienvault_otx_data,
     }
 
-    try:
-        data_func = data_func_map[api_name]
-    except KeyError:
-        raise ValueError(f"No such API {api_name}")
-
-    return data_func(target_api_data, response, target)
+    return data_func_map[api](target_api_data, response, target)
 
 
-def add_ip_api_data(target_api_data, response, target):
+def add_ip_api_data(target_api_data: dict[str, Any], response: Response, target: Target) -> None:
     if response.status_code == 200:
         status_string(True, "ip-api", target)
         target_api_data["ip_api"] = response.json()
@@ -70,7 +68,7 @@ def add_ip_api_data(target_api_data, response, target):
         status_string(False, "ip-api", target, response.status_code)
 
 
-def add_shodan_data(target_api_data, response, target):
+def add_shodan_data(target_api_data: dict[str, Any], response: Response, target: Target) -> None:
     if response.status_code == 200:
         status_string(True, "shodan", target)
         target_api_data["shodan"] = response.json()
@@ -78,17 +76,19 @@ def add_shodan_data(target_api_data, response, target):
         status_string(False, "shodan", target, response.status_code)
 
 
-def add_virustotal_data(target_api_data, response, target):
+def add_virustotal_data(target_api_data: dict[str, Any], response: Response, target: Target) -> None:
     if response == "NotFoundError":
         status_string(False, "virustotal", target, '"Not Found"')
+        target_api_data["vt"] = {"error": "NotFoundError"}
     elif response == "APIError":
         status_string(False, "virustotal", target, '"API Error"')
+        target_api_data["vt"] = {"error": "APIError"}
     else:
         status_string(True, "virustotal", target)
         target_api_data["vt"] = response
 
 
-def add_threatcrowd_data(target_api_data, response, target):
+def add_threatcrowd_data(target_api_data: dict[str, Any], response: Response, target: Target) -> None:
     if response.status_code == 200:
         status_string(True, "threatcrowd", target)
         target_api_data["tc"] = response.json()
@@ -96,7 +96,7 @@ def add_threatcrowd_data(target_api_data, response, target):
         status_string(False, "threatcrowd", target, response.status_code)
 
 
-def add_alienvault_otx_data_ip(target_api_data, responses, target):
+def add_alienvault_otx_data_ip(target_api_data: dict[str, Any], responses: tuple[Response, Response], target: Target) -> None:
     url_response, malware_response = responses
 
     url_data = url_response.json() if url_response.status_code == 200 else None
@@ -118,7 +118,7 @@ def add_alienvault_otx_data_ip(target_api_data, responses, target):
         status_string(False, "alienvault otx malware", target, malware_response.status_code)
 
 
-def add_alienvault_otx_data_hash(target_api_data, responses, target):
+def add_alienvault_otx_data_hash(target_api_data: dict[str, Any], responses: tuple[Response, Response], target: Target):
     general_response, analysis_response = responses
 
     general_data = general_response.json() if general_response.status_code == 200 else None
@@ -140,14 +140,10 @@ def add_alienvault_otx_data_hash(target_api_data, responses, target):
         status_string(False, "alienvault otx analysis", target, analysis_response.status_code)
 
 
-def add_alienvault_otx_data(target_api_data, responses, target):
-    # Since we know the target is already good, this recalculation is an
-    # acceptable tradeoff for the simplicity of keeping parameters uniform
-    target_type = get_target_type(target)
-
-    if target_type == "address":
+def add_alienvault_otx_data(target_api_data: dict[str, Any], responses: tuple[Response, Response], target: Target):
+    if target.type == TargetType.Address:
         add_alienvault_otx_data_ip(target_api_data, responses, target)
-    elif target_type == "hash":
+    elif target.type == TargetType.Hash:
         add_alienvault_otx_data_hash(target_api_data, responses, target)
     else:
-        raise ValueError(f"Unsupported target type {target_type}")
+        raise UnsupportedTargetTypeError(target.type)

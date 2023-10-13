@@ -25,19 +25,14 @@ import os
 import stat
 import socket
 
+from collections.abc import Generator
+
 import mapis_license_notices
 
-
-INTERACTIVE_COMMANDS = {
-    "help": "Print this help prompt",
-    "quit": "Exit the program",
-    "warranty": "Show warranty information",
-    "redistribution": "Show information about terms of redistribution",
-    "screenshot": "Take screenshots for the previous target"
-}
+from mapis_types import *
 
 
-def read_targets_stdin():
+def read_targets_stdin() -> Generator[Target]:
     stdin_is_pipe = stat.S_ISFIFO(os.fstat(0).st_mode)
 
     # Don't print license notice if not truly interactive
@@ -53,7 +48,7 @@ def read_targets_stdin():
             request_str += "Input an IP address or sample hash (help for commands): "
 
         try:
-            target = input(request_str).strip()
+            name = input(request_str).strip()
             # Manually reset color
             # Autoreset doesn't handle the newline from input()
             print(colorama.Style.RESET_ALL, end="")
@@ -65,10 +60,10 @@ def read_targets_stdin():
             print("\nCaught keyboard interrupt. Exiting.")
             return
 
-        yield (target, get_target_type(target))
+        yield Target(name, Target.deduce_type(name))
 
 
-def read_targets_file(targets_file: os.PathLike | io.TextIOBase):
+def read_targets_file(targets_file: os.PathLike | io.TextIOBase) -> Generator[Target]:
     try:
         targets_file = open(targets_file, "r")
     except TypeError:
@@ -77,29 +72,10 @@ def read_targets_file(targets_file: os.PathLike | io.TextIOBase):
     # propagate OSError
 
     for line in targets_file:
-        target = line.strip()
-        target_type = get_target_type(target)
-        yield (target, target_type)
+        name = line.strip()
+        yield Target(name, Target.deduce_type(name))
 
 
-def read_targets_list(targets: str):
-    for target in targets.split(","):
-        target_type = get_target_type(target)
-        yield (target, target_type)
-
-
-def get_target_type(target):
-    if target in INTERACTIVE_COMMANDS.keys():
-        return "command"
-
-    try:
-        socket.inet_pton(socket.AF_INET, target)
-        return "address"
-    except socket.error:
-        pass
-
-    if all(c in "0123456789abcdefABCDEF" for c in target):
-        return "hash"
-
-    # No matching target type
-    return None
+def read_targets_list(targets: str) -> Generator[Target]:
+    for name in targets.split(","):
+        yield Target(name, Target.deduce_type(name))

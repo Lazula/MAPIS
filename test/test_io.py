@@ -27,7 +27,7 @@ from io import StringIO
 from mapis_io import *
 
 class TestIO(unittest.TestCase):
-    targets = (
+    names = (
         "127.0.0.1",
         "10.0.0.1",
         "172.16.0.1",
@@ -41,21 +41,21 @@ class TestIO(unittest.TestCase):
     )
 
     expected = (
-        ("127.0.0.1", "address"),
-        ("10.0.0.1", "address"),
-        ("172.16.0.1", "address"),
-        ("192.168.0.1", "address"),
-        ("0000", "hash"),
-        ("1111", "hash"),
-        ("2222", "hash"),
-        ("3333", "hash"),
-        ("invalid", None),
-        ("help", "command")
+        Target("127.0.0.1", TargetType.Address),
+        Target("10.0.0.1", TargetType.Address),
+        Target("172.16.0.1", TargetType.Address),
+        Target("192.168.0.1", TargetType.Address),
+        Target("0000", TargetType.Hash),
+        Target("1111", TargetType.Hash),
+        Target("2222", TargetType.Hash),
+        Target("3333", TargetType.Hash),
+        Target("invalid", None),
+        Target("help", TargetType.Command)
     )
 
     def test_read_targets_file(self):
         targets_file = tempfile.NamedTemporaryFile(mode="w+")
-        targets_file.write("\n".join(self.targets))
+        targets_file.write("\n".join(self.names))
         targets_file.seek(0)
 
         # Use file
@@ -70,10 +70,5 @@ class TestIO(unittest.TestCase):
 
 
     def test_read_targets_list(self):
-        result = tuple(read_targets_list(",".join(self.targets)))
+        result = tuple(read_targets_list(",".join(self.names)))
         self.assertEqual(result, self.expected)
-
-
-    def test_get_target_type(self):
-        for target, expected_type in self.expected:
-            self.assertEqual(get_target_type(target), expected_type)

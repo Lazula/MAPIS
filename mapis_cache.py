@@ -19,14 +19,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import json
+import os
+import sys
 
 from os.path import join as pathjoin
+from typing import Any
 
-cache_files_by_age = list()
+from mapis_types import *
 
-readable_size_units = {
+cache_files_by_age: list[str] = list()
+
+readable_size_units: dict[str, int] = {
     "":  1, "k":   1000, "m":   1000**2, "g":   1000**3, "t":   1000**4,
     "b": 1, "kb":  1000, "mb":  1000**2, "gb":  1000**3, "tb":  1000**4,
 
@@ -34,30 +38,30 @@ readable_size_units = {
             "kib": 1024, "mib": 1024**2, "gib": 1024**3, "tib": 1024**4
 }
 
-def readable_to_bytes(size_str):
+def readable_to_bytes(hr_size: str) -> int:
     try:
-        return int(size_str)
+        return int(hr_size)
     except ValueError:
         pass
 
-    size_str = size_str.lower()
+    hr_size = hr_size.lower()
 
     try:
         # Use descending order to not catch "b" first
         for letter in "tgmkb":
-            units_index = size_str.find(letter)
+            units_index = hr_size.find(letter)
             if units_index > -1:
                 break
 
-        number = size_str[:units_index].strip()
-        unit = size_str[units_index:].strip()
+        number = hr_size[:units_index].strip()
+        unit = hr_size[units_index:].strip()
         return int(float(number) * readable_size_units[unit])
     except ValueError as err:
         print(repr(err))
         return None
 
 
-def bytes_to_readable(size_bytes):
+def bytes_to_readable(size_bytes: int) -> str:
     size_bytes = int(size_bytes)
     binary_units = ("B", "KiB", "MiB", "GiB", "TiB")
     i = 0
@@ -67,11 +71,11 @@ def bytes_to_readable(size_bytes):
     return f"{size_bytes:.2f}".rstrip("0").rstrip(".") + binary_units[i]
 
 
-def get_cache_filename(target_data_dict):
+def get_cache_filename(target_data_dict: dict[str, Any]) -> str:
     return f"{target_data_dict['target']}.cache.json"
 
 
-def get_cache_usage(cache_folder):
+def get_cache_usage(cache_folder: str) -> int:
     return sum(
         de.stat().st_size
         for de in os.scandir(cache_folder)
@@ -79,16 +83,16 @@ def get_cache_usage(cache_folder):
     )
 
 
-def clear_cache_filelist():
+def clear_cache_filelist() -> None:
     global cache_files_by_age
     cache_files_by_age = list()
 
 
-def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
+def get_cache_entry(cache_folder: str, target: Target, api_list: list[str] = None, verbose: bool = False) -> dict[str, dict]:
     try:
         cache_file_path = pathjoin(cache_folder, f"{target}.cache.json")
         with open(cache_file_path) as cache_file:
-            target_data_dict = json.load(cache_file)
+            target_data_dict = json.load(cache_file, cls=Decoder)
         if verbose:
             print(f"Found cache hit for {target}.")
 
@@ -112,19 +116,20 @@ def get_cache_entry(cache_folder, target, api_list=None, verbose=False):
     return
 
 
-def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=None, quota_strategy=None, current_disk_usage=None, verbose=False) -> int:
+def put_cache_entry(cache_folder: str, target_data_dict: dict[str, dict], use_quota: bool = False, quota_size: bool = None, quota_strategy: bool = None, current_disk_usage: int = None, verbose: bool = False) -> int:
     """Add a target's data to the on-disk cache. Returns the new disk usage in bytes."""
 
     global cache_files_by_age
-    target = target_data_dict["target"]
+    target: Target = target_data_dict["target"]
     cache_file_name = f"{target}.cache.json"
     cache_file_path = pathjoin(cache_folder, cache_file_name)
-    cache_data = json.dumps(target_data_dict)
+    cache_data = json.dumps(target_data_dict, cls=Encoder)
 
     write_to_cache = True
+    # TODO: use an enum
     reason = None
 
-    if not current_disk_usage:
+    if current_disk_usage is None:
         current_disk_usage = get_cache_usage(cache_folder)
 
     if use_quota:
@@ -132,7 +137,15 @@ def put_cache_entry(cache_folder, target_data_dict, use_quota=False, quota_size=
         # (lazily put off until needed)
         if len(cache_files_by_age) == 0:
             # Sort by age - oldest first, newest last
-            cache_files_by_age.extend(sorted((pathjoin(cache_folder, item) for item in os.listdir(cache_folder)), key=os.path.getctime))
+            cache_files_by_age.extend(
+                sorted(
+                    (
+                        pathjoin(cache_folder, item)
+                        for item in os.listdir(cache_folder)
+                    ),
+                    key=os.path.getctime
+                )
+            )
         if current_disk_usage is None:
             current_disk_usage = get_cache_usage(cache_folder)
 

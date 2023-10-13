@@ -25,6 +25,8 @@ import itertools
 from copy import deepcopy
 from dataclasses import dataclass
 
+from mapis_types import *
+
 STORED_FORE: colorama.ansi.AnsiFore = deepcopy(colorama.Fore)
 
 def disable_color() -> None:
@@ -85,7 +87,7 @@ class IPAPIStrings:
     ANNOUNCE = IPAPIStyle.ANNOUNCE + "ip-api.com API Response:"
 
 
-def print_ip_api(api_data):
+def print_ip_api(api_data: dict) -> None:
     print(IPAPIStrings.ANNOUNCE)
 
     for name, key in IP_API_PARAMS.items():
@@ -113,7 +115,7 @@ class ShodanStrings:
     NO_DATA = ShodanStyle.NO_DATA + "No data found for {target}"
 
 
-def print_shodan(api_data, target):
+def print_shodan(api_data: dict, target: Target) -> None:
     print(ShodanStrings.ANNOUNCE)
 
     if "error" in api_data:
@@ -123,12 +125,13 @@ def print_shodan(api_data, target):
 
 
     for name, key in SHODAN_PARAMS.items():
-        print(format_dict_output(name, api_data[key], ShodanStyle.ENTRY))
+        print(format_dict_output(name, api_data.get(key, "NO RESPONSE"), ShodanStyle.ENTRY))
     print()
 
 
 class VirusTotalStyle:
     ANNOUNCE = colorama.Fore.LIGHTCYAN_EX + colorama.Style.BRIGHT
+    ERROR = colorama.Fore.LIGHTRED_EX + colorama.Style.BRIGHT
     PERMALINK = colorama.Fore.LIGHTCYAN_EX
 
     TIMEOUT = PrintStyle(
@@ -150,6 +153,7 @@ class VirusTotalStyle:
 
 class VirusTotalStrings:
     ANNOUNCE = VirusTotalStyle.ANNOUNCE + "VirusTotal API Response:"
+    ERROR = VirusTotalStyle.ERROR + "Error: {error}"
     PERMALINK_ADDRESS = VirusTotalStyle.PERMALINK + "https://www.virustotal.com/gui/ip-address/{target}/detection"
     PERMALINK_HASH = VirusTotalStyle.PERMALINK + "https://www.virustotal.com/gui/file/{target}/detection"
 
@@ -163,15 +167,24 @@ VIRUSTOTAL_PARAMS = (
 )
 
 
-def print_virustotal(api_data, target, target_type):
+def print_virustotal(api_data: dict, target: Target) -> None:
     print(VirusTotalStrings.ANNOUNCE)
+
+    error = api_data.get("error")
+    if error is not None:
+        error = {
+            "NotFoundError": "Not Found",
+            "APIError": "API Error"
+        }[error]
+        print(VirusTotalStrings.ERROR.format(error=error))
+        return
 
     for key, name, style in VIRUSTOTAL_PARAMS:
         print(format_dict_output(name, api_data[key], style))
 
-    if target_type == "address":
+    if target.type == TargetType.Address:
         print(VirusTotalStrings.PERMALINK_ADDRESS.format(target=target))
-    elif target_type == "hash":
+    elif target.type == TargetType.Hash:
         print(VirusTotalStrings.PERMALINK_HASH.format(target=target))
     print()
 
@@ -222,7 +235,7 @@ class ThreatCrowdStrings:
     #PERMALINK_HASH = ThreatCrowdStyle.PERMALINK + "http://ci-www.threatcrowd.org/malware.php?md5={target}"
 
 
-def print_threatcrowd_address(target_api_data, target):
+def print_threatcrowd_address(target_api_data: dict, target: Target) -> None:
     # TODO: option to show more than 25
     resolutions = target_api_data["resolutions"]
     if len(resolutions) > 0:
@@ -244,7 +257,7 @@ def print_threatcrowd_address(target_api_data, target):
     print()
 
 
-def print_threatcrowd_hash(target_api_data, target):
+def print_threatcrowd_hash(target_api_data: dict, target: Target) -> None:
     print(ThreatCrowdStrings.ALIAS_ANNOUNCE.format(target=target))
     print(format_dict_output("MD5", target_api_data["md5"], ThreatCrowdStyle.ALIAS_ENTRY))
     print(format_dict_output("SHA1", target_api_data["sha1"], ThreatCrowdStyle.ALIAS_ENTRY))
@@ -283,7 +296,7 @@ def print_threatcrowd_hash(target_api_data, target):
     print()
 
 
-def print_threatcrowd(target_api_data, target, target_type):
+def print_threatcrowd(target_api_data: dict, target: Target) -> None:
     print(ThreatCrowdStrings.ANNOUNCE)
 
     if target_api_data["response_code"] == "0":
@@ -304,11 +317,10 @@ def print_threatcrowd(target_api_data, target, target_type):
     except KeyError:
         pass # TODO show not found
 
-    if target_type == "address":
+    if target.type == TargetType.Address:
         print_threatcrowd_address(target_api_data, target)
-    elif target_type == "hash":
+    elif target.type == TargetType.Hash:
         print_threatcrowd_hash(target_api_data, target)
-    # TODO: no catching branch here
 
     try:
         print(ThreatCrowdStyle.PERMALINK + target_api_data["permalink"])
@@ -346,7 +358,7 @@ class AlienVaultOTXStrings:
     PERMALINK_HASH = AlienVaultOTXStyle.PERMALINK + "https://otx.alienvault.com/indicator/file/{target}"
 
 
-def print_alienvault_otx_address(target_url_api_data, target_malware_api_data, target):
+def print_alienvault_otx_address(target_url_api_data: dict, target_malware_api_data: dict, target: Target) -> None:
     # TODO: move data processing
     # Process url data
     unique_domains = list()
@@ -393,7 +405,7 @@ def print_alienvault_otx_address(target_url_api_data, target_malware_api_data, t
     print()
 
 
-def print_alienvault_otx_hash(general_data, analysis_data, target):
+def print_alienvault_otx_hash(general_data: dict, analysis_data: dict, target: Target):
     # TODO: all of this data processing doesnt belong here
     pulse_data = general_data.get("pulse_info", dict())
     pulses = pulse_data.get("pulses", dict())
@@ -475,12 +487,12 @@ def print_alienvault_otx_hash(general_data, analysis_data, target):
     print()
 
 
-def print_alienvault_otx(alienvault_otx_data, target, target_type):
+def print_alienvault_otx(alienvault_otx_data: dict[str, dict], target: Target) -> None:
     print(AlienVaultOTXStrings.ANNOUNCE)
 
-    if target_type == "address":
+    if target.type == TargetType.Address:
         print_alienvault_otx_address(alienvault_otx_data["url"], alienvault_otx_data["malware"], target)
-    elif target_type == "hash":
+    elif target.type == TargetType.Hash:
         print_alienvault_otx_hash(alienvault_otx_data["general"], alienvault_otx_data["analysis"], target)
 
 
@@ -510,9 +522,8 @@ class PrintTargetStrings:
     ))
 
 
-def print_target_data(target_data_dict):
+def print_target_data(target_data_dict: dict) -> None:
     target = target_data_dict["target"]
-    target_type = target_data_dict["target_type"]
     target_api_data = target_data_dict["target_api_data"]
 
     print(PrintTargetStrings.ANNOUNCE.format(target=target))
@@ -528,13 +539,13 @@ def print_target_data(target_data_dict):
         print_shodan(target_api_data["shodan"], target)
 
     if "vt" in target_api_data:
-        print_virustotal(target_api_data["vt"], target, target_type)
+        print_virustotal(target_api_data["vt"], target)
 
     if "tc" in target_api_data:
-        print_threatcrowd(target_api_data["tc"], target, target_type)
+        print_threatcrowd(target_api_data["tc"], target)
 
     if "otx" in target_api_data:
-        print_alienvault_otx(target_api_data["otx"], target, target_type)
+        print_alienvault_otx(target_api_data["otx"], target)
 
     print(PrintTargetStrings.FINISH.format(target=target))
     print()
