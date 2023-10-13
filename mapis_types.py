@@ -63,12 +63,28 @@ class API(enum.IntEnum):
             raise ValueError(s)
 
 
+    def __repr__(self):
+        return APIS[self].id
+
+
+    def __str__(self):
+        return APIS[self].name
+
+
 @dataclass(frozen=True)
 class APIInfo:
     id: str
     name: str
     key_needed: bool
     target_types: tuple[TargetType]
+
+
+    def __repr__(self):
+        return self.id
+
+
+    def __str__(self):
+        return self.name
 
 
 APIS: dict[API, APIInfo] = {

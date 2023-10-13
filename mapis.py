@@ -44,7 +44,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Query multiple API endpoints for information about IP addresses or hashes.")
     parser.add_argument("-c", "--color", action="store_true", help="Enable color output")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(info.id for info in APIS.values()), metavar="API[,API...]")
+    parser.add_argument("-a", "--api-list", type=str, help="List the APIs to use as a comma-separated list. Options: " + ", ".join(repr(api) for api in APIS), metavar="API[,API...]")
     parser.add_argument("-p", "--purge-cache", action="store_true", help="Purge cache (delete all previously cached results.")
 
     target_args = parser.add_mutually_exclusive_group()
@@ -55,8 +55,8 @@ def parse_arguments():
     key_args = parser.add_argument_group(description="Key arguments.")
     key_args.add_argument("--keydir", type=str, help="Directory which stores API key files (name format: <api_name>_key.txt). Other key options will override these files.", default="API_KEYS")
     # Generate key arguments automatically
-    for info in KEY_APIS.values():
-        key_args.add_argument(f"--{info.id}-key", type=str, help=f"{info.id} API key (overrides keyfile).")
+    for api in KEY_APIS:
+        key_args.add_argument(f"--{repr(api)}-key", type=str, help=f"{repr(api)} API key (overrides keyfile).")
 
     # TODO time this
     screenshot_args = parser.add_argument_group(description="Screenshot arguments. Screenshots slow down lookups significantly - it is recommended to only use them after confirmation. Screenshots are not subject to quota limitations at this time.")
@@ -103,13 +103,13 @@ def parse_arguments():
             print(f"\nInvalid API {ve.args[0]} provided in -a/--api-list.")
             raise RuntimeError
     else:
-        args.api_list = tuple(APIS.keys())
+        args.api_list = tuple(APIS)
 
     if not args.keydir:
-        for api, info in KEY_APIS.items():
-            if api in args.api_list and not vars(args).get(f"{info.id}_key"):
+        for api in KEY_APIS:
+            if api in args.api_list and not vars(args).get(f"{repr(api)}_key"):
                 parser.print_help()
-                print(f"\n{info.id} key missing.")
+                print(f"\n{repr(api)} key missing.")
                 print("You must specify an existing key directory if you have not provided all API keys.")
                 raise RuntimeError
 
@@ -133,18 +133,18 @@ def parse_arguments():
 def read_keys(args) -> dict[API, str]:
     keys = dict()
 
-    for api, info in KEY_APIS.items():
+    for api in KEY_APIS.keys():
         if api not in args.api_list:
             continue
 
         # First, check for keys given in arguments
-        arg_key = vars(args).get(f"{info.id}_key")
+        arg_key = vars(args).get(f"{repr(api)}_key")
         if arg_key:
             keys[api] = arg_key
         # Otherwise, try to read key from file
         elif args.keydir:
             try:
-                keys[api] = open(pathjoin(args.keydir, f"{info.id}_key.txt")).read().strip()
+                keys[api] = open(pathjoin(args.keydir, f"{repr(api)}_key.txt")).read().strip()
             except OSError:
                 # Skip over nonexistent keys silently
                 # Missing key errors are handled outside this function
@@ -181,9 +181,9 @@ def main():
 
     # This is NOT redundant with the argument checker.
     # Only this check accounts for missing key files.
-    for api, info in KEY_APIS.items():
+    for api in KEY_APIS:
         if api in args.api_list and api not in keys:
-            print(f"No {info.id} key. Provide it with --{info.id}-key or in the key directory as {info.id}_key.txt")
+            print(f"No {repr(api)} key. Provide it with --{repr(api)}-key or in the key directory as {repr(api)}_key.txt")
             return 1
 
     geckodriver_path = shutil.which("geckodriver") or shutil.which("geckodriver.exe")
