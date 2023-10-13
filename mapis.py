@@ -181,9 +181,9 @@ def main():
 
     # This is NOT redundant with the argument checker.
     # Only this check accounts for missing key files.
-    for api in KEY_APIS.keys():
+    for api, info in KEY_APIS.items():
         if api in args.api_list and api not in keys:
-            print(f"No {api} key. Provide it with --{api}-key or in the key directory as {api}_key.txt")
+            print(f"No {info.id} key. Provide it with --{info.id}-key or in the key directory as {info.id}_key.txt")
             return 1
 
     geckodriver_path = shutil.which("geckodriver") or shutil.which("geckodriver.exe")
