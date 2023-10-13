@@ -133,7 +133,7 @@ def parse_arguments():
 def read_keys(args) -> dict[API, str]:
     keys = dict()
 
-    for api in KEY_APIS.keys():
+    for api in KEY_APIS:
         if api not in args.api_list:
             continue
 
