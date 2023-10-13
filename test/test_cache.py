@@ -170,7 +170,7 @@ class TestCache(unittest.TestCase):
                 output.getvalue(),
                 "\n".join((
                     f"Wrote {self.sample_data_address['target']} to cache - Sufficient space.",
-                    "Disk quota usage at 116B of 1KiB (116 of 1024 bytes)",
+                    "Disk quota usage at 150B of 1KiB (150 of 1024 bytes)",
                     ""
                 ))
             )
@@ -195,7 +195,7 @@ class TestCache(unittest.TestCase):
                 output.getvalue(),
                 "\n".join((
                     f"Wrote {self.sample_data_hash['target']} to cache - Sufficient space.",
-                    "Disk quota usage at 230B of 1KiB (230 of 1024 bytes)",
+                    "Disk quota usage at 298B of 1KiB (298 of 1024 bytes)",
                     ""
                 ))
             )
@@ -218,8 +218,8 @@ class TestCache(unittest.TestCase):
     def test_cache_quota_no_space_fifo(self):
         with tempfile.TemporaryDirectory() as cache_folder:
             clear_cache_filelist()
-            address_dump_size = len(json.dumps(self.sample_data_address))
-            hash_dump_size = len(json.dumps(self.sample_data_hash))
+            address_dump_size = len(json.dumps(self.sample_data_address, cls=Encoder))
+            hash_dump_size = len(json.dumps(self.sample_data_hash, cls=Encoder))
 
             spacetaker_path = os.path.join(cache_folder, "spacetaker")
             with open(spacetaker_path, "w") as f:
@@ -251,7 +251,7 @@ class TestCache(unittest.TestCase):
                 "\n".join((
                     f"Deleting {spacetaker_path} according to fifo disk cache strategy. ({bytes_to_readable(spacetaker_size)} cleared)",
                     f"Wrote {self.sample_data_address['target']} to cache - Cleared space.",
-                    "Disk quota usage at 116B of 116B (116 of 116 bytes)",
+                    "Disk quota usage at 150B of 150B (150 of 150 bytes)",
                     ""
                 ))
             )
@@ -286,7 +286,7 @@ class TestCache(unittest.TestCase):
                 "\n".join((
                     f"Deleting {get_cache_filename(self.sample_data_address)} according to fifo disk cache strategy. ({bytes_to_readable(address_dump_size)} cleared)",
                     f"Wrote {self.sample_data_hash['target']} to cache - Cleared space.",
-                    "Disk quota usage at 114B of 114B (114 of 114 bytes)",
+                    "Disk quota usage at 148B of 148B (148 of 148 bytes)",
                     ""
                 ))
             )
