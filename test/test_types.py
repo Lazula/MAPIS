@@ -70,19 +70,19 @@ class TestUnsupportedTargetTypeError(unittest.TestCase):
 class TestJSONEncDec(unittest.TestCase):
     expected_encoded = "\n".join((
         '{',
-        '   "_type": "Target",',
-        '   "name": "127.0.0.1",',
-        '   "type": "Address",',
-        '   "data": {',
-        '       "API.IPAPI": {'
-        '           "key1": "val1",',
-        '           "key2": "val2"',
-        '       },',
-        '       "API.Shodan": {'
-        '           "key3": "val3",',
-        '           "key4": "val4"',
-        '       }',
-        '   }',
+        '    "name": "127.0.0.1",',
+        '    "type": "Address",',
+        '    "data": {',
+        '        "IPAPI": {',
+        '            "key1": "val1",',
+        '            "key2": "val2"',
+        '        },',
+        '        "Shodan": {',
+        '            "key3": "val3",',
+        '            "key4": "val4"',
+        '        }',
+        '    },',
+        '    "_type": "Target"',
         '}'
     ))
 

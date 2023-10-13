@@ -24,6 +24,7 @@ import json
 import socket
 import sys
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 
 INTERACTIVE_COMMANDS = {
@@ -35,13 +36,13 @@ INTERACTIVE_COMMANDS = {
 }
 
 
-class TargetType(enum.Enum):
+class TargetType(enum.IntEnum):
     Address = enum.auto()
     Hash = enum.auto()
     Command = enum.auto()
 
 
-class API(enum.Enum):
+class API(enum.IntEnum):
     IPAPI = enum.auto()
     Shodan = enum.auto()
     VirusTotal = enum.auto()
@@ -90,6 +91,7 @@ class Target:
     name: str
     type: TargetType
     data: dict[API, dict] = field(default_factory=dict)
+    _type: str = "Target"
 
     @staticmethod
     def deduce_type(name: str) -> TargetType:
@@ -113,25 +115,43 @@ class Target:
         return self.name
 
 
-    def __to_json__(self):
-        raise NotImplementedError
+    def __serializable__(self):
+        se = deepcopy(self.__dict__)
+        se["type"] = se["type"].name
+        se["data"] = {
+            k.name: v
+            for k, v in se["data"].items()
+        }
+        return se
 
 
     @staticmethod
-    def __from_json__(o: dict):
-        raise NotImplementedError
+    def __deserialize__(o: dict):
+        de = deepcopy(o)
+        de["type"] = TargetType[de["type"]]
+        de["data"] = {
+            API[k]: v
+            for k, v in de["data"].items()
+        }
+        return Target(**de)
 
 
 class UnsupportedTargetTypeError(ValueError):
     pass
+
+
 class Encoder(json.JSONEncoder):
     def default(self, o):
-        try:
-            return o.__to_json__()
-        except TypeError: # __to_json__ is not callable
-            return o.__to_json__
-        except AttributeError: # __to_json__ does not exist
-            return super(Encoder, self).default(o)
+        if hasattr(o, "__serializable__"):
+            try:
+                return o.__serializable__()
+            except TypeError:
+                return json.JSONEncoder.default(self, o)
+        else:
+            try:
+                return o.__dict__
+            except AttributeError:
+                return json.JSONEncoder.default(self, o)
 
 
 class Decoder(json.JSONDecoder):
@@ -153,6 +173,6 @@ class Decoder(json.JSONDecoder):
             raise TypeError(f"No such _type {obj_type} in mapis_types")
 
         try:
-            return getattr(sys.modules["mapis_types"], obj_type).__from_json__(o)
-        except AttributeError: # no __from_json__
-            raise TypeError(f"Given _type {obj_type} has no __from_json__() staticmethod")
+            return getattr(sys.modules["mapis_types"], obj_type).__deserialize__(o)
+        except AttributeError: # no __deserialize__
+            raise TypeError(f"Given _type {obj_type} has no __deserialize__() staticmethod")
