@@ -56,7 +56,7 @@ def parse_arguments():
     key_args.add_argument("--keydir", type=str, help="Directory which stores API key files (name format: <api_name>_key.txt). Other key options will override these files.", default="API_KEYS")
     # Generate key arguments automatically
     for api in KEY_APIS:
-        key_args.add_argument(f"--{repr(api)}-key", type=str, help=f"{repr(api)} API key (overrides keyfile).")
+        key_args.add_argument(f"--{repr(api)}-key", type=str, help=f"{api} API key (overrides keyfile).")
 
     # TODO time this
     screenshot_args = parser.add_argument_group(description="Screenshot arguments. Screenshots slow down lookups significantly - it is recommended to only use them after confirmation. Screenshots are not subject to quota limitations at this time.")
