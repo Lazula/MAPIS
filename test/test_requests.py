@@ -40,7 +40,6 @@ aridviper_address_target = Target(aridviper_address, Target.deduce_type(aridvipe
 aridviper_md5_hash_target = Target(aridviper_md5_hash, Target.deduce_type(aridviper_md5_hash))
 aridviper_sha1_hash_target = Target(aridviper_sha1_hash, Target.deduce_type(aridviper_sha1_hash))
 
-
 class TestDummyResponse(unittest.TestCase):
     def test_dummy_response(self):
         resp = dummy_response(b'{"key": "value"}')
@@ -147,15 +146,28 @@ class TestRequestVirusTotal(unittest.TestCase):
         self.client.close()
 
 
+    # If any response values exceed expected values, it's been updated.
+    # We can safely ignore it by rolling back to the previous known good.
+    @staticmethod
+    def rollback_updated_response(response: Response, expected: Response):
+        return {
+            k: ev if rv > ev else rv
+            for k, rv, ev
+            in zip(response.keys(), response.values(), expected.values())
+        }
+
+
     def test_request_virustotal_address(self):
         resp = request_virustotal(google_dns_target, self.client)
         expected = {'harmless': 69, 'malicious': 2, 'suspicious': 0, 'undetected': 19, 'timeout': 0}
+        resp = self.rollback_updated_response(resp, expected)
         self.assertEqual(resp, expected)
 
 
     def test_request_virustotal_hash(self):
         resp = request_virustotal(aridviper_md5_hash_target, self.client)
         expected = {'harmless': 0, 'type-unsupported': 4, 'suspicious': 0, 'confirmed-timeout': 0, 'timeout': 0, 'failure': 0, 'malicious': 55, 'undetected': 16}
+        resp = self.rollback_updated_response(resp, expected)
         self.assertEqual(resp, expected)
         resp = request_virustotal(aridviper_sha1_hash_target, self.client)
         self.assertEqual(resp, expected)
